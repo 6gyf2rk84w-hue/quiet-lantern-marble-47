@@ -128,6 +128,7 @@ html,body{overflow-x:hidden;max-width:100%}
 @media (prefers-reduced-motion:reduce){.exinfo{animation:none}}
 .exlink{margin-top:6px;color:var(--mute);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;-webkit-user-select:all;user-select:all}
 .exnote{margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.35);color:#fde68a;font-size:14px;line-height:1.45}
+.oid{display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:top;font-size:12px;font-weight:600;letter-spacing:.02em;color:#c4b5fd;background:rgba(139,92,246,.14);border:1px solid rgba(139,92,246,.3);border-radius:8px;padding:2px 8px;margin-bottom:6px;font-variant-numeric:tabular-nums}
 .dragging{position:relative;z-index:6;background:#1d1d2c!important;box-shadow:0 14px 34px rgba(0,0,0,.55);border-color:var(--a1)!important}
 </style>
 </head>
@@ -145,7 +146,7 @@ html,body{overflow-x:hidden;max-width:100%}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="icons.js"></script>
 <script>
-var KEY='order-tracker-v1',S={nodes:[],orders:[]},tab='main',path=[],openG={},sb=null,user=null,isAdmin=false,snap={n:{},o:{}},q=Promise.resolve(),hasPos=false,drag=null,dragging=false,gripOrders=false,isViewer=false,exOpen=false;
+var KEY='order-tracker-v1',S={nodes:[],orders:[]},tab='main',path=[],openG={},sb=null,user=null,isAdmin=false,snap={n:{},o:{}},q=Promise.resolve(),hasPos=false,drag=null,dragging=false,gripOrders=false,isViewer=false,exOpen=false,hasOid=false;
 var SB_URL='https://ttnvbmqtyxbqfyxadjdf.supabase.co',SB_KEY='sb_publishable_1gfteu6dl--6yOo8FKMFow_QmAO7FGE';
 function localOld(){try{var r=JSON.parse(localStorage.getItem(KEY));if(r&&r.nodes&&r.nodes.length)return r}catch(e){}return null}
 function seedDefaults(){
@@ -161,7 +162,7 @@ function seedDefaults(){
 }
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(function(){t.style.display='none'},4500)}
 function depth(n){var d=0;while(n&&n.parent){n=node(n.parent);d++}return d}
-function mkSnap(){var n={},o={};S.nodes.forEach(function(x){n[x.id]=JSON.stringify([x.title,x.parent||null,x.img||null,x.pos==null?null:x.pos])});S.orders.forEach(function(x){o[x.id]=JSON.stringify([x.node,x.title,String(x.price),x.status,!!x.star,x.pos==null?null:x.pos])});return{n:n,o:o}}
+function mkSnap(){var n={},o={};S.nodes.forEach(function(x){n[x.id]=JSON.stringify([x.title,x.parent||null,x.img||null,x.pos==null?null:x.pos])});S.orders.forEach(function(x){o[x.id]=JSON.stringify([x.node,x.title,String(x.price),x.status,!!x.star,x.pos==null?null:x.pos,x.oid||''])});return{n:n,o:o}}
 function save(){q=q.then(push).catch(function(e){toast('Not saved: '+((e&&e.message)||e));return load().then(render)})}
 async function push(){
   if(!sb||!user)return;
@@ -173,7 +174,13 @@ async function push(){
   if(delO.length){r=await sb.from('orders').delete().in('id',delO);if(r.error)throw r.error}
   if(delN.length){r=await sb.from('nodes').delete().in('id',delN);if(r.error)throw r.error}
   if(upN.length){upN.sort(function(a,b){return depth(a)-depth(b)});r=await sb.from('nodes').upsert(upN.map(function(n){var x={id:n.id,title:n.title,parent:n.parent||null,img:n.img||null};if(hasPos)x.pos=n.pos==null?null:n.pos;return x}));if(r.error)throw r.error}
-  if(upO.length){r=await sb.from('orders').upsert(upO.map(function(o){var x={id:o.id,node:o.node,title:o.title,price:String(o.price),status:o.status,star:!!o.star};if(hasPos)x.pos=o.pos==null?null:o.pos;return x}));if(r.error)throw r.error}
+  if(upO.length){
+    var withOid=hasOid||upO.some(function(o){return !!o.oid});
+    var rows=function(inc){return upO.map(function(o){var x={id:o.id,node:o.node,title:o.title,price:String(o.price),status:o.status,star:!!o.star};if(hasPos)x.pos=o.pos==null?null:o.pos;if(inc)x.order_id=o.oid||null;return x})};
+    r=await sb.from('orders').upsert(rows(withOid));
+    if(r.error&&withOid&&/order_id/.test(r.error.message||'')){r=await sb.from('orders').upsert(rows(false));if(!r.error)toast('Order saved, but the Order ID was not. Run the Order ID SQL in Supabase first.')}
+    else if(!r.error&&withOid)hasOid=true;
+    if(r.error)throw r.error}
   snap=c2;
 }
 async function load(){
@@ -181,8 +188,9 @@ async function load(){
   var b=await sb.from('orders').select('*').order('created_at',{ascending:true});
   if(a.error)throw a.error;if(b.error)throw b.error;
   var smp=a.data[0]||b.data[0];if(smp)hasPos=('pos' in smp);
+  if(b.data[0])hasOid=('order_id' in b.data[0]);
   S.nodes=a.data.map(function(r){return{id:r.id,title:r.title,parent:r.parent||null,img:r.img||null,pos:r.pos==null?null:r.pos}});
-  S.orders=b.data.map(function(r){return{id:r.id,node:r.node,title:r.title,price:r.price,status:r.status,star:!!r.star,pos:r.pos==null?null:r.pos}});
+  S.orders=b.data.map(function(r){return{id:r.id,node:r.node,title:r.title,price:r.price,status:r.status,star:!!r.star,pos:r.pos==null?null:r.pos,oid:r.order_id||''}});
   sortAll();
   path=path.filter(function(id){return node(id)});
   snap=mkSnap();
@@ -229,7 +237,7 @@ var editing=false;
 var TABS=[['main','Main'],['working','Working'],['partial','Partial'],['failed','Failed']];
 var STS=[['processing','Processing','var(--wait)'],['working','Working','var(--ok)'],['partial','Partial','var(--part)'],['failed','Failed','var(--bad)']];
 function ordHtml(o){
-  return '<div class="ord" data-oid="'+o.id+'" data-grp="'+o.status+'"><div class="top">'+(gripOrders?'<span class="grip" aria-label="Drag to reorder">⋮⋮</span>':'')+'<div style="flex:1;min-width:0"><div class="t">'+esc(o.title)+'</div><div class="price">'+esc(o.price)+' per 1,000</div></div>'
+  return '<div class="ord" data-oid="'+o.id+'" data-grp="'+o.status+'"><div class="top">'+(gripOrders?'<span class="grip" aria-label="Drag to reorder">⋮⋮</span>':'')+'<div style="flex:1;min-width:0">'+(o.oid?'<span class="oid">ID: '+esc(o.oid)+'</span>':'')+'<div class="t">'+esc(o.title)+'</div><div class="price">'+esc(o.price)+' per 1,000</div></div>'
   +'<div>'+(editing?'<button class="xdel" data-delord="'+o.id+'" aria-label="Delete">✕</button>':'')+'</div></div>'
   +'<div class="seg">'+STS.map(function(s){return '<button class="'+s[0]+(o.status===s[0]?' on':'')+'"'+(isViewer?' disabled':' data-st="'+s[0]+'" data-o="'+o.id+'"')+'>'+s[1]+'</button>'}).join('')+'</div></div>';
 }
@@ -278,9 +286,9 @@ function newSite(){
   document.getElementById('x').onclick=closeSheet;
 }
 function newOrder(){
-  openSheet('<h3>Add new order</h3><input type="text" id="f1" placeholder="Order title"><input type="number" id="f2" inputmode="decimal" placeholder="Price per thousand"><button class="btn" id="ok">Add order</button><button class="btn alt" id="x">Cancel</button>');
-  document.getElementById('ok').onclick=function(){var t=document.getElementById('f1').value.trim(),p=document.getElementById('f2').value.trim();if(!t||!p)return;
-    S.orders.push({id:uid(),node:cur(),title:t,price:p,status:'processing',star:false});save();closeSheet();render()};
+  openSheet('<h3>Add new order</h3><input type="text" id="f1" placeholder="Order title"><input type="text" id="f3" placeholder="Order ID (optional)" autocomplete="off" autocapitalize="off"><input type="number" id="f2" inputmode="decimal" placeholder="Price per thousand"><button class="btn" id="ok">Add order</button><button class="btn alt" id="x">Cancel</button>');
+  document.getElementById('ok').onclick=function(){var t=document.getElementById('f1').value.trim(),p=document.getElementById('f2').value.trim(),oi=document.getElementById('f3').value.trim();if(!t||!p)return;
+    S.orders.push({id:uid(),node:cur(),title:t,price:p,status:'processing',star:false,oid:oi});save();closeSheet();render()};
   document.getElementById('x').onclick=closeSheet;
 }
 function openIcon(id){
