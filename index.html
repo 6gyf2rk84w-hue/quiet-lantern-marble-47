@@ -6,10 +6,10 @@
 <meta name="color-scheme" content="dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Orders">
+<meta name="apple-mobile-web-app-title" content="Panel Tracker">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#0a0a12">
-<title>Order Tracker</title>
+<title>Panel Tracker</title>
 <style>
 :root{--bg:#0a0a12;--card:rgba(255,255,255,.05);--card2:rgba(255,255,255,.09);--line:rgba(255,255,255,.09);--ink:#f2f2f7;--mute:#8e8ea3;--a1:#8b5cf6;--a2:#22d3ee;--ok:#34d399;--bad:#fb7185;--wait:#fbbf24;--part:#f97316;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box}
@@ -24,6 +24,9 @@ button{font:inherit;color:inherit;cursor:pointer}
 #crumb{font-size:14px;color:var(--mute);margin-top:2px}
 #tabs{display:flex;gap:8px;overflow-x:auto;max-width:640px;margin:10px auto 0;scrollbar-width:none}
 #tabs::-webkit-scrollbar{display:none}
+#tabs{max-width:none;margin:2px -14px -10px;padding:8px 18px 20px;-webkit-overflow-scrolling:touch;scroll-padding:0 18px}
+#tabs::after{content:"";flex:0 0 4px}
+#tabs button.on{box-shadow:0 4px 12px rgba(139,92,246,.4)}
 #tabs button{flex:none;padding:8px 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--mute);font-size:15px;font-weight:500}
 #tabs button.on{background:linear-gradient(135deg,var(--a1),var(--a2));border-color:transparent;color:#fff;font-weight:600;box-shadow:0 4px 16px rgba(139,92,246,.4)}
 #main{max-width:640px;margin:0 auto;padding:14px 14px 130px}
@@ -39,7 +42,6 @@ button{font:inherit;color:inherit;cursor:pointer}
 .ord .top{display:flex;justify-content:space-between;gap:8px}
 .ord .t{font-weight:600;font-size:18px}
 .price{color:var(--a2);font-size:15px;margin-top:2px}
-.star{color:var(--mute);font-size:24px}.star.on{color:#fbbf24;text-shadow:0 0 12px rgba(251,191,36,.6)}
 .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}
 .seg button{padding:9px 0;border-radius:12px;border:1px solid var(--line);background:none;color:var(--mute);font-size:14px}
 .seg .processing.on{background:rgba(251,191,36,.16);color:var(--wait);border-color:var(--wait)}
@@ -70,9 +72,9 @@ input:focus{border-color:var(--a1)}
 .seg{grid-template-columns:repeat(4,1fr);gap:5px}
 .seg button{font-size:12.5px}
 .seg .partial.on{background:rgba(249,115,22,.18);color:var(--part);border-color:var(--part)}
-#tabs button.t-working.on{background:linear-gradient(135deg,#059669,#34d399);box-shadow:0 4px 16px rgba(52,211,153,.4)}
-#tabs button.t-partial.on{background:linear-gradient(135deg,#ea580c,#fb923c);box-shadow:0 4px 16px rgba(249,115,22,.45)}
-#tabs button.t-failed.on{background:linear-gradient(135deg,#dc2626,#fb7185);box-shadow:0 4px 16px rgba(251,113,133,.4)}
+#tabs button.t-working.on{background:linear-gradient(135deg,#059669,#34d399);box-shadow:0 4px 12px rgba(52,211,153,.4)}
+#tabs button.t-partial.on{background:linear-gradient(135deg,#ea580c,#fb923c);box-shadow:0 4px 12px rgba(249,115,22,.45)}
+#tabs button.t-failed.on{background:linear-gradient(135deg,#dc2626,#fb7185);box-shadow:0 4px 12px rgba(251,113,133,.4)}
 #pen{margin-left:auto;flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--card2);font-size:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.3)}
 #pen.on{background:linear-gradient(135deg,var(--a1),var(--a2));border-color:transparent;box-shadow:0 4px 16px rgba(139,92,246,.5)}
 .dangerbtn{background:linear-gradient(135deg,#dc2626,#fb7185)}
@@ -110,14 +112,14 @@ input:focus{border-color:var(--a1)}
 </head>
 <body>
 <div id="top">
-  <div class="hrow"><button id="back" data-back="1" aria-label="Back">&#8592;</button><div><h1 id="ttl">Order Tracker</h1><div id="crumb"></div></div><button id="pen" data-pen="1" aria-label="Edit mode">&#9998;</button><button id="more" data-more="1" aria-label="More">&#8943;</button><div id="menu"><button class="mi" data-creds="1">Login credentials</button><button class="mi" id="modsBtn" data-mods="1" style="display:none">Mods</button><button data-logout="1">Log out</button></div></div>
+  <div class="hrow"><button id="back" data-back="1" aria-label="Back">&#8592;</button><div><h1 id="ttl">Panel Tracker</h1><div id="crumb"></div></div><button id="pen" data-pen="1" aria-label="Edit mode">&#9998;</button><button id="more" data-more="1" aria-label="More">&#8943;</button><div id="menu"><button class="mi" data-creds="1">Login credentials</button><button class="mi" id="modsBtn" data-mods="1" style="display:none">Mods</button><button data-logout="1">Log out</button></div></div>
   <div id="tabs"></div>
 </div>
 <div id="main"><div class="empty">Loading...</div></div>
 <button id="fab" aria-label="Add">+</button>
 <div id="cpage"><div class="chead"><button class="cb" data-cclose="1" aria-label="Back">&#8592;</button><h2>Logins</h2><button class="btn" id="cadd" data-cadd="1" style="display:none;width:auto;margin:0;padding:10px 14px;font-size:15px">+ Add</button></div><div id="clist"></div></div>
 <div id="veil"><div id="sheet"></div></div>
-<div id="login"><div class="lbox"><h2 class="lt">Order Tracker</h2><p class="lp">Sign in to continue</p><input type="email" id="lem" placeholder="Email" autocomplete="username"><input type="password" id="lpw" placeholder="Password" autocomplete="current-password"><button class="btn" id="lgo">Sign in</button><button class="fl" id="lfg">Forgot password?</button><div id="lmsg"></div></div></div>
+<div id="login"><div class="lbox"><h2 class="lt">Panel Tracker</h2><p class="lp">Sign in to continue</p><input type="email" id="lem" placeholder="Email" autocomplete="username"><input type="password" id="lpw" placeholder="Password" autocomplete="current-password"><button class="btn" id="lgo">Sign in</button><button class="fl" id="lfg">Forgot password?</button><div id="lmsg"></div></div></div>
 <div id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="icons.js"></script>
@@ -195,17 +197,17 @@ function kids(p){return S.nodes.filter(function(n){return n.parent===p})}
 function cur(){return path.length?path[path.length-1]:null}
 function chain(id){var c=[],n=node(id);while(n){c.unshift(n);n=n.parent?node(n.parent):null}return c}
 var editing=false;
-var TABS=[['main','Main'],['working','Working'],['partial','Partial'],['failed','Failed'],['favorites','Favorites']];
+var TABS=[['main','Main'],['working','Working'],['partial','Partial'],['failed','Failed']];
 var STS=[['processing','Processing','var(--wait)'],['working','Working','var(--ok)'],['partial','Partial','var(--part)'],['failed','Failed','var(--bad)']];
 function ordHtml(o){
   return '<div class="ord"><div class="top"><div><div class="t">'+esc(o.title)+'</div><div class="price">'+esc(o.price)+' per 1,000</div></div>'
-  +'<div><button class="ghost star'+(o.star?' on':'')+'" data-star="'+o.id+'">'+(o.star?'★':'☆')+'</button>'+(editing?'<button class="ghost" data-delord="'+o.id+'">\u{1F5D1}</button>':'')+'</div></div>'
+  +'<div>'+(editing?'<button class="ghost" data-delord="'+o.id+'">\u{1F5D1}</button>':'')+'</div></div>'
   +'<div class="seg">'+STS.map(function(s){return '<button class="'+s[0]+(o.status===s[0]?' on':'')+'" data-st="'+s[0]+'" data-o="'+o.id+'">'+s[1]+'</button>'}).join('')+'</div></div>';
 }
 function render(){
   var c=cur();
   document.getElementById('back').style.display=(tab==='main'&&c)?'flex':'none';
-  document.getElementById('ttl').textContent=tab==='main'?(c?node(c).title:'Order Tracker'):TABS.filter(function(t){return t[0]===tab})[0][1];
+  document.getElementById('ttl').textContent=tab==='main'?(c?node(c).title:'Panel Tracker'):TABS.filter(function(t){return t[0]===tab})[0][1];
   document.getElementById('crumb').textContent=(tab==='main'&&c)?chain(c).map(function(n){return n.title}).join('  ›  '):'';
   document.getElementById('fab').style.display=(tab==='main'&&(c||isAdmin))?'block':'none';
   document.getElementById('pen').classList.toggle('on',editing);
@@ -218,7 +220,7 @@ function render(){
       h+='<div class="sec" data-open="'+k.id+'"><div class="ico'+(k.img?'':' l')+'"'+(k.parent===null&&isAdmin?' data-icon="'+k.id+'"':'')+'>'+(k.img?'<img src="'+k.img+'" alt="">':esc(k.title.charAt(0).toUpperCase()))+'</div><div class="i"><div class="t">'+esc(k.title)+'</div><div class="s">'+n+' sections · '+m+' orders</div></div>'+(editing&&(isAdmin||k.parent!==null)?'<button class="ghost" data-delnode="'+k.id+'">\u{1F5D1}</button>':'')+'<span class="chev">›</span></div>'})}
     STS.forEach(function(s){var g=os.filter(function(o){return o.status===s[0]});if(g.length)h+='<div class="sg"><span class="dot" style="background:'+s[2]+'"></span>'+s[1]+'</div>'+g.map(ordHtml).join('')});
   }else{
-    var list=S.orders.filter(function(o){return tab==='favorites'?o.star:o.status===tab});
+    var list=S.orders.filter(function(o){return o.status===tab});
     if(!list.length)h+='<div class="empty"><b>\u{1F4ED}</b>No orders here yet.</div>';
     var groups={};
     list.forEach(function(o){var ch=chain(o.node);if(!ch.length)return;var m=ch[0].id,s=ch[1]?ch[1].id:'_';groups[m]=groups[m]||{};(groups[m][s]=groups[m][s]||[]).push(o)});
@@ -358,7 +360,7 @@ document.getElementById('fab').onclick=function(){
 };
 document.getElementById('veil').onclick=function(e){if(e.target.id==='veil')closeSheet()};
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-back],[data-t],[data-open],[data-delnode],[data-delord],[data-star],[data-st],[data-tog],[data-icon],[data-pen],[data-out],[data-more],[data-logout],[data-mods],[data-creds]');
+  var t=e.target.closest('[data-back],[data-t],[data-open],[data-delnode],[data-delord],[data-st],[data-tog],[data-icon],[data-pen],[data-out],[data-more],[data-logout],[data-mods],[data-creds]');
   var mn=document.getElementById('menu');if(!t||!t.dataset.more)mn.classList.remove('on');if(!t)return;
   var d=t.dataset;
   if(held){held=false;return}
@@ -375,7 +377,6 @@ document.addEventListener('click',function(e){
   else if(d.delnode){askDel('section and everything inside it',function(){delNode(d.delnode)});return}
   else if(d.open){path.push(d.open)}
   else if(d.delord){askDel('order',function(){S.orders=S.orders.filter(function(o){return o.id!==d.delord});save()});return}
-  else if(d.star){var o=S.orders.find(function(o){return o.id===d.star});o.star=!o.star;save()}
   else if(d.st){var o2=S.orders.find(function(o){return o.id===d.o});o2.status=d.st;save()}
   render();
 });
