@@ -120,6 +120,14 @@ html,body{overflow-x:hidden;max-width:100%}
 .seg button:disabled:not(.on){opacity:.45}
 .mrow .rtag{flex:none;overflow:visible;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:rgba(139,92,246,.16);color:#c4b5fd}
 .mrow .rtag.v{background:rgba(34,211,238,.14);color:var(--a2)}
+.excard{margin:6px 0 4px;padding:14px 16px;border-radius:16px;background:var(--card);border:1px solid var(--line)}
+.exhead{display:flex;align-items:center;gap:10px;font-weight:600;font-size:16px}
+.exinfo{flex:none;width:28px;height:28px;border-radius:50%;border:1px solid rgba(251,191,36,.6);background:rgba(251,191,36,.18);color:var(--wait);font-size:16px;font-weight:800;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;animation:expulse 2.6s ease-in-out infinite}
+.exinfo.on{background:var(--wait);color:#1a1205;animation:none}
+@keyframes expulse{0%,100%{box-shadow:0 0 0 0 rgba(251,191,36,0)}50%{box-shadow:0 0 0 6px rgba(251,191,36,.16),0 0 14px rgba(251,191,36,.45)}}
+@media (prefers-reduced-motion:reduce){.exinfo{animation:none}}
+.exlink{margin-top:6px;color:var(--mute);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;-webkit-user-select:all;user-select:all}
+.exnote{margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.35);color:#fde68a;font-size:14px;line-height:1.45}
 .dragging{position:relative;z-index:6;background:#1d1d2c!important;box-shadow:0 14px 34px rgba(0,0,0,.55);border-color:var(--a1)!important}
 </style>
 </head>
@@ -137,7 +145,7 @@ html,body{overflow-x:hidden;max-width:100%}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="icons.js"></script>
 <script>
-var KEY='order-tracker-v1',S={nodes:[],orders:[]},tab='main',path=[],openG={},sb=null,user=null,isAdmin=false,snap={n:{},o:{}},q=Promise.resolve(),hasPos=false,drag=null,dragging=false,gripOrders=false,isViewer=false;
+var KEY='order-tracker-v1',S={nodes:[],orders:[]},tab='main',path=[],openG={},sb=null,user=null,isAdmin=false,snap={n:{},o:{}},q=Promise.resolve(),hasPos=false,drag=null,dragging=false,gripOrders=false,isViewer=false,exOpen=false;
 var SB_URL='https://ttnvbmqtyxbqfyxadjdf.supabase.co',SB_KEY='sb_publishable_1gfteu6dl--6yOo8FKMFow_QmAO7FGE';
 function localOld(){try{var r=JSON.parse(localStorage.getItem(KEY));if(r&&r.nodes&&r.nodes.length)return r}catch(e){}return null}
 function seedDefaults(){
@@ -237,6 +245,7 @@ function render(){
   var h='';
   if(tab==='main'){
     var ks=kids(c),os=S.orders.filter(function(o){return o.node===c});
+    if(c&&node(c)&&node(c).parent!==null)h+='<div class="excard"><div class="exhead">Example Link<button class="exinfo'+(exOpen?' on':'')+'" data-exinfo="1" aria-label="About this link">?</button></div><div class="exlink">https://www.instagram.com/p/........../</div>'+(exOpen?'<div class="exnote">Orders must use this link format. Links in any other format may cause the order to fail.</div>':'')+'</div>';
     if(!ks.length&&!os.length)h+='<div class="empty"><b>✨</b>'+(!c?'Clean slate.'+(isViewer?'':'<br>Tap + to create your first title.'):(node(c).parent===null?'No sites yet.'+(isViewer?'':'<br>Tap + to add a website.'):'No orders yet.'+(isViewer?'':'<br>Tap + to add an order.')))+'</div>';
     if(ks.length){if(c)h+='<div class="sg">Sites</div>';ks.forEach(function(k){var n=kids(k.id).length,m=S.orders.filter(function(o){return o.node===k.id}).length,sub=k.parent===null?(n+(n===1?' site':' sites')):(m+(m===1?' order':' orders'));
       h+='<div class="sec" data-open="'+k.id+'">'+(editing&&k.parent!==null?'<span class="grip" aria-label="Drag to reorder">⋮⋮</span>':'')+'<div class="ico'+(k.img?'':' l')+(k.parent===null&&isAdmin&&editing?' ed':'')+'"'+(k.parent===null&&isAdmin&&editing?' data-icon="'+k.id+'"':'')+'>'+(k.img?'<img src="'+k.img+'" alt="">':esc(k.title.charAt(0).toUpperCase()))+'</div><div class="i"><div class="t">'+esc(k.title)+'</div><div class="s">'+sub+'</div></div>'+(editing&&(isAdmin||k.parent!==null)?'<button class="xdel" data-delnode="'+k.id+'" aria-label="Delete">✕</button>':'')+'<span class="chev">›</span></div>'})}
@@ -422,18 +431,19 @@ document.getElementById('fab').onclick=function(){
 document.getElementById('veil').onclick=function(e){if(e.target.id==='veil')closeSheet()};
 document.addEventListener('click',function(e){
   if(e.target.closest('.grip'))return;
-  var t=e.target.closest('[data-back],[data-t],[data-open],[data-delnode],[data-delord],[data-st],[data-tog],[data-icon],[data-pen],[data-out],[data-more],[data-logout],[data-mods],[data-creds]');
+  var t=e.target.closest('[data-back],[data-t],[data-open],[data-delnode],[data-delord],[data-st],[data-tog],[data-icon],[data-pen],[data-out],[data-more],[data-logout],[data-mods],[data-creds],[data-exinfo]');
   var mn=document.getElementById('menu');if(!t||!t.dataset.more)mn.classList.remove('on');if(!t)return;
   var d=t.dataset;
   if(held){held=false;return}
   if(d.icon){openIcon(d.icon);return}
+  else if(d.exinfo){exOpen=!exOpen}
   else if(d.pen){if(!isViewer)editing=!editing}
   else if(d.more){mn.classList.toggle('on');return}
   else if(d.logout){askLogout();return}
   else if(d.mods){openMods();return}
   else if(d.creds){if(!isViewer)openCreds();return}
   else if(d.out){sb.auth.signOut().then(function(){location.reload()});return}
-  else if(d.back){path.pop()}
+  else if(d.back){path.pop();exOpen=false}
   else if(d.tog){openG[d.tog]=!openG[d.tog]}
   else if(d.t){tab=d.t}
   else if(d.delnode){askDel('section and everything inside it',function(){delNode(d.delnode)});return}
