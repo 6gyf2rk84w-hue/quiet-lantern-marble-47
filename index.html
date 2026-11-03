@@ -94,15 +94,28 @@ input:focus{border-color:var(--a1)}
 .mrow button{flex:none;width:34px;height:34px;border-radius:50%;border:1px solid var(--bad);background:rgba(251,113,133,.12);color:var(--bad);font-size:18px;line-height:1}
 .fl{display:block;text-align:center;color:var(--a2);margin-top:14px;font-size:15px;background:none;border:none;width:100%}
 .ok{color:var(--ok)!important}
+#cpage{display:none;position:fixed;inset:0;z-index:35;background:var(--bg);overflow-y:auto;padding-top:env(safe-area-inset-top,0px)}
+#cpage.on{display:block}
+.chead{position:sticky;top:0;display:flex;align-items:center;gap:12px;padding:12px 14px;background:rgba(10,10,18,.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--line);z-index:2}
+.chead .cb{flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--card2);font-size:22px;display:flex;align-items:center;justify-content:center}
+.chead h2{margin:0;font-size:24px;font-weight:700;flex:1}
+#clist{max-width:640px;margin:0 auto;padding:14px 14px 40px}
+.ccard{padding:14px;margin-bottom:12px;border-radius:18px;background:var(--card);border:1px solid var(--line)}
+.ccard .ct{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:700;font-size:19px;margin-bottom:8px}
+.cf{display:flex;align-items:center;gap:8px;padding:10px 12px;margin-top:6px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+.cf .cl{flex:none;width:72px;color:var(--mute);font-size:13px;text-transform:uppercase;letter-spacing:.06em}
+.cf .cv{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:16px}
+.cf button{flex:none;border:1px solid var(--line);background:var(--card2);color:var(--ink);border-radius:10px;padding:6px 10px;font-size:13px}
 </style>
 </head>
 <body>
 <div id="top">
-  <div class="hrow"><button id="back" data-back="1" aria-label="Back">&#8592;</button><div><h1 id="ttl">Order Tracker</h1><div id="crumb"></div></div><button id="pen" data-pen="1" aria-label="Edit mode">&#9998;</button><button id="more" data-more="1" aria-label="More">&#8943;</button><div id="menu"><button class="mi" id="modsBtn" data-mods="1" style="display:none">Mods</button><button data-logout="1">Log out</button></div></div>
+  <div class="hrow"><button id="back" data-back="1" aria-label="Back">&#8592;</button><div><h1 id="ttl">Order Tracker</h1><div id="crumb"></div></div><button id="pen" data-pen="1" aria-label="Edit mode">&#9998;</button><button id="more" data-more="1" aria-label="More">&#8943;</button><div id="menu"><button class="mi" data-creds="1">Login credentials</button><button class="mi" id="modsBtn" data-mods="1" style="display:none">Mods</button><button data-logout="1">Log out</button></div></div>
   <div id="tabs"></div>
 </div>
 <div id="main"><div class="empty">Loading...</div></div>
 <button id="fab" aria-label="Add">+</button>
+<div id="cpage"><div class="chead"><button class="cb" data-cclose="1" aria-label="Back">&#8592;</button><h2>Logins</h2><button class="btn" id="cadd" data-cadd="1" style="display:none;width:auto;margin:0;padding:10px 14px;font-size:15px">+ Add</button></div><div id="clist"></div></div>
 <div id="veil"><div id="sheet"></div></div>
 <div id="login"><div class="lbox"><h2 class="lt">Order Tracker</h2><p class="lp">Sign in to continue</p><input type="email" id="lem" placeholder="Email" autocomplete="username"><input type="password" id="lpw" placeholder="Password" autocomplete="current-password"><button class="btn" id="lgo">Sign in</button><button class="fl" id="lfg">Forgot password?</button><div id="lmsg"></div></div></div>
 <div id="toast"></div>
@@ -150,7 +163,7 @@ async function load(){
   snap=mkSnap();
 }
 async function stillMember(){if(!user)return false;var r=await sb.from('members').select('user_id').eq('user_id',user.id);return !!(r.error||(r.data&&r.data.length))}
-function kick(msg){var u=user;user=null;isAdmin=false;S={nodes:[],orders:[]};path=[];editing=false;closeSheet();document.getElementById('main').innerHTML='';sb.auth.signOut().catch(function(){});document.getElementById('login').style.display='flex';document.getElementById('lmsg').textContent=msg||''}
+function kick(msg){document.getElementById('cpage').classList.remove('on');var u=user;user=null;isAdmin=false;S={nodes:[],orders:[]};path=[];editing=false;closeSheet();document.getElementById('main').innerHTML='';sb.auth.signOut().catch(function(){});document.getElementById('login').style.display='flex';document.getElementById('lmsg').textContent=msg||''}
 function refresh(){if(!user||document.hidden||document.getElementById('veil').style.display==='flex')return;q=q.then(async function(){if(!isAdmin&&!(await stillMember())){kick('Your access to this app has been removed.');return}await load();render()}).catch(function(){})}
 async function start(u){
   user=u;document.getElementById('login').style.display='none';
@@ -283,6 +296,43 @@ function newPassword(){
     var r=await sb.auth.updateUser({password:a});if(r.error){m.textContent=r.error.message;return}
     closeSheet();toast('Password updated.');history.replaceState(null,'',location.pathname)};
 }
+var CR=[],shown={};
+async function openCreds(){
+  document.getElementById('cpage').classList.add('on');
+  document.getElementById('cadd').style.display=isAdmin?'block':'none';
+  document.getElementById('clist').innerHTML='<div class="empty" style="margin-top:60px">Loading...</div>';
+  var r=await sb.from('creds').select('*').order('created_at',{ascending:true});
+  if(r.error){document.getElementById('clist').innerHTML='<div class="empty" style="margin-top:60px">Could not load logins.<br>'+esc(r.error.message)+'</div>';return}
+  CR=r.data;drawCreds();
+}
+function drawCreds(){
+  var el=document.getElementById('clist');
+  if(!CR.length){el.innerHTML='<div class="empty" style="margin-top:60px"><b>\u{1F510}</b>No logins yet.'+(isAdmin?'<br>Tap + Add to save one.':'')+'</div>';return}
+  el.innerHTML=CR.map(function(c){var sh=shown[c.id];
+    return '<div class="ccard"><div class="ct"><span>'+esc(c.site)+'</span>'+(isAdmin?'<button class="ghost" data-cdel="'+c.id+'" aria-label="Delete">\u{1F5D1}</button>':'')+'</div>'
+    +'<div class="cf"><span class="cl">Email</span><span class="cv">'+esc(c.email)+'</span><button data-ccopy="'+c.id+'" data-f="email">Copy</button></div>'
+    +'<div class="cf"><span class="cl">Password</span><span class="cv">'+(sh?esc(c.password):'••••••••')+'</span><button data-cshow="'+c.id+'">'+(sh?'Hide':'Show')+'</button><button data-ccopy="'+c.id+'" data-f="password">Copy</button></div></div>'}).join('');
+}
+function addCred(){
+  openSheet('<h3>New login</h3><input type="text" id="cs" placeholder="Website name" autocomplete="off"><input type="text" id="ce" placeholder="Email or username" autocomplete="off" autocapitalize="off"><input type="text" id="cp" placeholder="Password" autocomplete="off" autocapitalize="off"><button class="btn" id="ok">Add login info</button><div id="cm" style="color:var(--bad);margin-top:10px;font-size:15px"></div><button class="btn alt" id="x">Cancel</button>');
+  document.getElementById('x').onclick=closeSheet;
+  document.getElementById('ok').onclick=async function(){var a=document.getElementById('cs').value.trim(),b=document.getElementById('ce').value.trim(),c=document.getElementById('cp').value,m=document.getElementById('cm');
+    if(!a||!b||!c){m.textContent='Fill in all three boxes.';return}
+    var r=await sb.from('creds').insert({site:a,email:b,password:c}).select();if(r.error){m.textContent=r.error.message;return}
+    closeSheet();CR=CR.concat(r.data);drawCreds()};
+}
+function copyText(t){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){toast('Copied')},function(){toast('Could not copy')})}
+document.getElementById('cpage').addEventListener('click',function(e){
+  var b=e.target.closest('[data-cclose],[data-cadd],[data-ccopy],[data-cshow],[data-cdel]');if(!b)return;var d=b.dataset;
+  if(d.cclose){document.getElementById('cpage').classList.remove('on');shown={}}
+  else if(d.cadd){addCred()}
+  else if(d.cshow){shown[d.cshow]=!shown[d.cshow];drawCreds()}
+  else if(d.ccopy){var c=CR.find(function(x){return String(x.id)===d.ccopy});if(c)copyText(c[d.f])}
+  else if(d.cdel){var c2=CR.find(function(x){return String(x.id)===d.cdel});
+    openSheet('<h3>Delete login?</h3><p style="color:var(--mute);margin:0 0 14px">Are you sure you want to delete the '+esc(c2?c2.site:'')+' login? This cannot be undone.</p><button class="btn dangerbtn" id="yes">Yes, delete</button><button class="btn alt" id="x">Cancel</button>');
+    document.getElementById('x').onclick=closeSheet;
+    document.getElementById('yes').onclick=async function(){var r=await sb.from('creds').delete().eq('id',d.cdel);closeSheet();if(r.error){toast('Not deleted: '+r.error.message);return}CR=CR.filter(function(x){return String(x.id)!==d.cdel});drawCreds()}}
+});
 var held=false,ht=null,sx=0,sy=0;
 function openRename(id){
   var n=node(id);
@@ -308,7 +358,7 @@ document.getElementById('fab').onclick=function(){
 };
 document.getElementById('veil').onclick=function(e){if(e.target.id==='veil')closeSheet()};
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-back],[data-t],[data-open],[data-delnode],[data-delord],[data-star],[data-st],[data-tog],[data-icon],[data-pen],[data-out],[data-more],[data-logout],[data-mods]');
+  var t=e.target.closest('[data-back],[data-t],[data-open],[data-delnode],[data-delord],[data-star],[data-st],[data-tog],[data-icon],[data-pen],[data-out],[data-more],[data-logout],[data-mods],[data-creds]');
   var mn=document.getElementById('menu');if(!t||!t.dataset.more)mn.classList.remove('on');if(!t)return;
   var d=t.dataset;
   if(held){held=false;return}
@@ -317,6 +367,7 @@ document.addEventListener('click',function(e){
   else if(d.more){mn.classList.toggle('on');return}
   else if(d.logout){askLogout();return}
   else if(d.mods){openMods();return}
+  else if(d.creds){openCreds();return}
   else if(d.out){sb.auth.signOut().then(function(){location.reload()});return}
   else if(d.back){path.pop()}
   else if(d.tog){openG[d.tog]=!openG[d.tog]}
