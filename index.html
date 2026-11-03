@@ -116,12 +116,16 @@ html,body{overflow-x:hidden;max-width:100%}
 .ico.ed{outline:2px dashed var(--a1);outline-offset:3px;border-radius:10px;cursor:pointer}
 .grip{flex:none;width:30px;align-self:stretch;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:20px;letter-spacing:-3px;touch-action:none;-webkit-user-select:none;user-select:none;cursor:grab;margin:-6px 0 -6px -4px}
 .ord .top .grip{align-self:center;height:44px}
+.seg button:disabled{cursor:default}
+.seg button:disabled:not(.on){opacity:.45}
+.mrow .rtag{flex:none;overflow:visible;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:rgba(139,92,246,.16);color:#c4b5fd}
+.mrow .rtag.v{background:rgba(34,211,238,.14);color:var(--a2)}
 .dragging{position:relative;z-index:6;background:#1d1d2c!important;box-shadow:0 14px 34px rgba(0,0,0,.55);border-color:var(--a1)!important}
 </style>
 </head>
 <body>
 <div id="top">
-  <div class="hrow"><button id="back" data-back="1" aria-label="Back">&#8592;</button><div class="tw"><h1 id="ttl">Panel Tracker</h1><div id="crumb"></div></div><button id="pen" data-pen="1" aria-label="Edit mode">&#9998;</button><button id="more" data-more="1" aria-label="More">&#8943;</button><div id="menu"><button class="mi" data-creds="1">Login credentials</button><button class="mi" id="modsBtn" data-mods="1" style="display:none">Mods</button><button data-logout="1">Log out</button></div></div>
+  <div class="hrow"><button id="back" data-back="1" aria-label="Back">&#8592;</button><div class="tw"><h1 id="ttl">Panel Tracker</h1><div id="crumb"></div></div><button id="pen" data-pen="1" aria-label="Edit mode">&#9998;</button><button id="more" data-more="1" aria-label="More">&#8943;</button><div id="menu"><button class="mi" id="credsBtn" data-creds="1">Login credentials</button><button class="mi" id="modsBtn" data-mods="1" style="display:none">Mods</button><button data-logout="1">Log out</button></div></div>
   <div id="tabs"></div>
 </div>
 <div id="main"><div class="empty">Loading...</div></div>
@@ -133,7 +137,7 @@ html,body{overflow-x:hidden;max-width:100%}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="icons.js"></script>
 <script>
-var KEY='order-tracker-v1',S={nodes:[],orders:[]},tab='main',path=[],openG={},sb=null,user=null,isAdmin=false,snap={n:{},o:{}},q=Promise.resolve(),hasPos=false,drag=null,dragging=false,gripOrders=false;
+var KEY='order-tracker-v1',S={nodes:[],orders:[]},tab='main',path=[],openG={},sb=null,user=null,isAdmin=false,snap={n:{},o:{}},q=Promise.resolve(),hasPos=false,drag=null,dragging=false,gripOrders=false,isViewer=false;
 var SB_URL='https://ttnvbmqtyxbqfyxadjdf.supabase.co',SB_KEY='sb_publishable_1gfteu6dl--6yOo8FKMFow_QmAO7FGE';
 function localOld(){try{var r=JSON.parse(localStorage.getItem(KEY));if(r&&r.nodes&&r.nodes.length)return r}catch(e){}return null}
 function seedDefaults(){
@@ -177,15 +181,19 @@ async function load(){
 }
 function byPos(a,b){return (a.pos==null?1e12:a.pos)-(b.pos==null?1e12:b.pos)}
 function sortAll(){S.nodes.sort(byPos);S.orders.sort(byPos)}
-async function stillMember(){if(!user)return false;var r=await sb.from('members').select('user_id').eq('user_id',user.id);return !!(r.error||(r.data&&r.data.length))}
-function kick(msg){document.getElementById('cpage').classList.remove('on');var u=user;user=null;isAdmin=false;S={nodes:[],orders:[]};path=[];editing=false;closeSheet();document.getElementById('main').innerHTML='';sb.auth.signOut().catch(function(){});document.getElementById('login').style.display='flex';document.getElementById('lmsg').textContent=msg||''}
+async function memberRow(){if(!user)return null;var r=await sb.from('members').select('*').eq('user_id',user.id);if(r.error)return {role:'mod'};return (r.data&&r.data[0])||null}
+async function stillMember(){var m=await memberRow();if(!m)return false;var v=m.role==='viewer';if(v!==isViewer){isViewer=v;if(v)editing=false;applyRole();render()}return true}
+function applyRole(){document.getElementById('pen').style.display=isViewer?'none':'flex';document.getElementById('credsBtn').style.display=isViewer?'none':'block'}
+function kick(msg){document.getElementById('cpage').classList.remove('on');isViewer=false;applyRole();var u=user;user=null;isAdmin=false;S={nodes:[],orders:[]};path=[];editing=false;closeSheet();document.getElementById('main').innerHTML='';sb.auth.signOut().catch(function(){});document.getElementById('login').style.display='flex';document.getElementById('lmsg').textContent=msg||''}
 function refresh(){if(!user||dragging||document.hidden||document.getElementById('veil').style.display==='flex')return;q=q.then(async function(){if(!isAdmin&&!(await stillMember())){kick('Your access to this app has been removed.');return}await load();render()}).catch(function(){})}
 async function start(u){
   user=u;document.getElementById('login').style.display='none';
   var a=await sb.from('admins').select('user_id').eq('user_id',u.id);
   isAdmin=!!(a.data&&a.data.length);
   document.getElementById('modsBtn').style.display=isAdmin?'block':'none';
+  isViewer=false;
   if(!isAdmin&&!(await stillMember()))return kick('Your access to this app has been removed.');
+  applyRole();
   await load();
   if(!S.nodes.length&&isAdmin){
     var old=localOld();
@@ -215,7 +223,7 @@ var STS=[['processing','Processing','var(--wait)'],['working','Working','var(--o
 function ordHtml(o){
   return '<div class="ord" data-oid="'+o.id+'" data-grp="'+o.status+'"><div class="top">'+(gripOrders?'<span class="grip" aria-label="Drag to reorder">⋮⋮</span>':'')+'<div style="flex:1;min-width:0"><div class="t">'+esc(o.title)+'</div><div class="price">'+esc(o.price)+' per 1,000</div></div>'
   +'<div>'+(editing?'<button class="xdel" data-delord="'+o.id+'" aria-label="Delete">✕</button>':'')+'</div></div>'
-  +'<div class="seg">'+STS.map(function(s){return '<button class="'+s[0]+(o.status===s[0]?' on':'')+'" data-st="'+s[0]+'" data-o="'+o.id+'">'+s[1]+'</button>'}).join('')+'</div></div>';
+  +'<div class="seg">'+STS.map(function(s){return '<button class="'+s[0]+(o.status===s[0]?' on':'')+'"'+(isViewer?' disabled':' data-st="'+s[0]+'" data-o="'+o.id+'"')+'>'+s[1]+'</button>'}).join('')+'</div></div>';
 }
 function render(){
   var c=cur();
@@ -223,13 +231,13 @@ function render(){
   document.getElementById('back').style.display=(tab==='main'&&c)?'flex':'none';
   document.getElementById('ttl').textContent=tab==='main'?(c?node(c).title:'Panel Tracker'):TABS.filter(function(t){return t[0]===tab})[0][1];
   document.getElementById('crumb').textContent=(tab==='main'&&c)?chain(c).map(function(n){return n.title}).join('  ›  '):'';
-  document.getElementById('fab').style.display=(tab==='main'&&(c||isAdmin))?'block':'none';
+  document.getElementById('fab').style.display=(tab==='main'&&!isViewer&&(c||isAdmin))?'block':'none';
   document.getElementById('pen').classList.toggle('on',editing);
   document.getElementById('tabs').innerHTML=TABS.map(function(t){return '<button data-t="'+t[0]+'" class="t-'+t[0]+(tab===t[0]?' on':'')+'">'+t[1]+'</button>'}).join('');
   var h='';
   if(tab==='main'){
     var ks=kids(c),os=S.orders.filter(function(o){return o.node===c});
-    if(!ks.length&&!os.length)h+='<div class="empty"><b>✨</b>'+(!c?'Clean slate.<br>Tap + to create your first title.':(node(c).parent===null?'No sites yet.<br>Tap + to add a website.':'No orders yet.<br>Tap + to add an order.'))+'</div>';
+    if(!ks.length&&!os.length)h+='<div class="empty"><b>✨</b>'+(!c?'Clean slate.'+(isViewer?'':'<br>Tap + to create your first title.'):(node(c).parent===null?'No sites yet.'+(isViewer?'':'<br>Tap + to add a website.'):'No orders yet.'+(isViewer?'':'<br>Tap + to add an order.')))+'</div>';
     if(ks.length){if(c)h+='<div class="sg">Sites</div>';ks.forEach(function(k){var n=kids(k.id).length,m=S.orders.filter(function(o){return o.node===k.id}).length,sub=k.parent===null?(n+(n===1?' site':' sites')):(m+(m===1?' order':' orders'));
       h+='<div class="sec" data-open="'+k.id+'">'+(editing&&k.parent!==null?'<span class="grip" aria-label="Drag to reorder">⋮⋮</span>':'')+'<div class="ico'+(k.img?'':' l')+(k.parent===null&&isAdmin&&editing?' ed':'')+'"'+(k.parent===null&&isAdmin&&editing?' data-icon="'+k.id+'"':'')+'>'+(k.img?'<img src="'+k.img+'" alt="">':esc(k.title.charAt(0).toUpperCase()))+'</div><div class="i"><div class="t">'+esc(k.title)+'</div><div class="s">'+sub+'</div></div>'+(editing&&(isAdmin||k.parent!==null)?'<button class="xdel" data-delnode="'+k.id+'" aria-label="Delete">✕</button>':'')+'<span class="chev">›</span></div>'})}
     STS.forEach(function(s){var g=os.filter(function(o){return o.status===s[0]});if(g.length)h+='<div class="sg"><span class="dot" style="background:'+s[2]+'"></span>'+s[1]+'</div>'+g.map(ordHtml).join('')});
@@ -290,14 +298,16 @@ function askLogout(){
   document.getElementById('x').onclick=closeSheet;
 }
 async function openMods(){
-  openSheet('<h3>Mods</h3><div id="mlist" style="color:var(--mute);margin-bottom:12px">Loading...</div><input type="email" id="madd" placeholder="Add mod by email"><button class="btn" id="mgo">Add mod</button><div id="mmsg" style="color:var(--bad);margin-top:10px;font-size:15px"></div><button class="btn alt" id="x">Close</button>');
+  openSheet('<h3>Mods</h3><div id="mlist" style="color:var(--mute);margin-bottom:12px">Loading...</div><input type="email" id="madd" placeholder="Email address"><div style="display:flex;gap:8px"><button class="btn" id="mgo">Add mod</button><button class="btn alt" id="mgv">Add viewer</button></div><div id="mmsg" style="color:var(--bad);margin-top:10px;font-size:15px"></div><button class="btn alt" id="x">Close</button>');
   document.getElementById('x').onclick=closeSheet;
-  document.getElementById('mgo').onclick=async function(){var e=document.getElementById('madd').value.trim(),m=document.getElementById('mmsg');m.className='';m.textContent='';if(!e)return;var r=await sb.rpc('add_member',{p_email:e});if(r.error){m.textContent=r.error.message;return}openMods()};
-  var r=await sb.from('members').select('user_id,email').order('added_at',{ascending:true});
+  async function addM(role){var e=document.getElementById('madd').value.trim(),m=document.getElementById('mmsg');m.className='';m.textContent='';if(!e){m.textContent='Type an email first.';return}var r=await sb.rpc('add_member',{p_email:e,p_role:role});if(r.error){m.textContent=r.error.message;return}openMods()}
+  document.getElementById('mgo').onclick=function(){addM('mod')};
+  document.getElementById('mgv').onclick=function(){addM('viewer')};
+  var r=await sb.from('members').select('*').order('added_at',{ascending:true});
   var el=document.getElementById('mlist');if(!el)return;
   if(r.error){el.textContent='Could not load mods: '+r.error.message;return}
   if(!r.data.length){el.textContent='No mods yet.';return}
-  el.innerHTML=r.data.map(function(x){return '<div class="mrow"><span>'+esc(x.email||x.user_id)+'</span><button data-rm="'+x.user_id+'" data-em="'+esc(x.email||'')+'" aria-label="Revoke">✕</button></div>'}).join('');
+  el.innerHTML=r.data.map(function(x){var v=x.role==='viewer';return '<div class="mrow"><span>'+esc(x.email||x.user_id)+'</span><span class="rtag'+(v?' v':'')+'">'+(v?'Viewer':'Mod')+'</span><button data-rm="'+x.user_id+'" data-em="'+esc(x.email||'')+'" aria-label="Revoke">✕</button></div>'}).join('');
   el.onclick=function(ev){var b=ev.target.closest('[data-rm]');if(!b)return;var id=b.dataset.rm,em=b.dataset.em;
     openSheet('<h3>Revoke access?</h3><p style="color:var(--mute);margin:0 0 14px">'+esc(em)+' will be logged out and locked out of the app.</p><button class="btn dangerbtn" id="yes">Yes, revoke</button><button class="btn alt" id="x">No</button>');
     document.getElementById('x').onclick=openMods;
@@ -319,6 +329,7 @@ function newPassword(){
 }
 var CR=[],shown={};
 async function openCreds(){
+  if(isViewer)return;
   document.getElementById('cpage').classList.add('on');
   document.getElementById('cadd').style.display=isAdmin?'block':'none';
   document.getElementById('clist').innerHTML='<div class="empty" style="margin-top:60px">Loading...</div>';
@@ -365,7 +376,7 @@ function openRename(id){
 var mainEl=document.getElementById('main');
 mainEl.addEventListener('pointerdown',function(e){
   held=false;clearTimeout(ht);
-  var s=e.target.closest('.sec');if(!s||e.target.closest('button')||e.target.closest('.grip')||(!isAdmin&&!cur()))return;
+  var s=e.target.closest('.sec');if(!s||e.target.closest('button')||e.target.closest('.grip')||isViewer||(!isAdmin&&!cur()))return;
   var id=s.dataset.open;sx=e.clientX;sy=e.clientY;
   ht=setTimeout(function(){held=true;openRename(id)},550);
 });
@@ -416,11 +427,11 @@ document.addEventListener('click',function(e){
   var d=t.dataset;
   if(held){held=false;return}
   if(d.icon){openIcon(d.icon);return}
-  else if(d.pen){editing=!editing}
+  else if(d.pen){if(!isViewer)editing=!editing}
   else if(d.more){mn.classList.toggle('on');return}
   else if(d.logout){askLogout();return}
   else if(d.mods){openMods();return}
-  else if(d.creds){openCreds();return}
+  else if(d.creds){if(!isViewer)openCreds();return}
   else if(d.out){sb.auth.signOut().then(function(){location.reload()});return}
   else if(d.back){path.pop()}
   else if(d.tog){openG[d.tog]=!openG[d.tog]}
