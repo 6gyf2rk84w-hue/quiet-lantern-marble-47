@@ -108,11 +108,17 @@ input:focus{border-color:var(--a1)}
 .cf .cl{flex:none;width:72px;color:var(--mute);font-size:13px;text-transform:uppercase;letter-spacing:.06em}
 .cf .cv{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:16px}
 .cf button{flex:none;border:1px solid var(--line);background:var(--card2);color:var(--ink);border-radius:10px;padding:6px 10px;font-size:13px}
+html,body{overflow-x:hidden;max-width:100%}
+.tw{flex:1;min-width:0}
+#ttl,#crumb{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#pen{margin-left:0}
+.xdel{flex:none;width:32px;height:32px;border-radius:50%;border:1px solid var(--bad);background:rgba(251,113,133,.12);color:var(--bad);font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}
+.ico.ed{outline:2px dashed var(--a1);outline-offset:3px;border-radius:10px;cursor:pointer}
 </style>
 </head>
 <body>
 <div id="top">
-  <div class="hrow"><button id="back" data-back="1" aria-label="Back">&#8592;</button><div><h1 id="ttl">Panel Tracker</h1><div id="crumb"></div></div><button id="pen" data-pen="1" aria-label="Edit mode">&#9998;</button><button id="more" data-more="1" aria-label="More">&#8943;</button><div id="menu"><button class="mi" data-creds="1">Login credentials</button><button class="mi" id="modsBtn" data-mods="1" style="display:none">Mods</button><button data-logout="1">Log out</button></div></div>
+  <div class="hrow"><button id="back" data-back="1" aria-label="Back">&#8592;</button><div class="tw"><h1 id="ttl">Panel Tracker</h1><div id="crumb"></div></div><button id="pen" data-pen="1" aria-label="Edit mode">&#9998;</button><button id="more" data-more="1" aria-label="More">&#8943;</button><div id="menu"><button class="mi" data-creds="1">Login credentials</button><button class="mi" id="modsBtn" data-mods="1" style="display:none">Mods</button><button data-logout="1">Log out</button></div></div>
   <div id="tabs"></div>
 </div>
 <div id="main"><div class="empty">Loading...</div></div>
@@ -201,7 +207,7 @@ var TABS=[['main','Main'],['working','Working'],['partial','Partial'],['failed',
 var STS=[['processing','Processing','var(--wait)'],['working','Working','var(--ok)'],['partial','Partial','var(--part)'],['failed','Failed','var(--bad)']];
 function ordHtml(o){
   return '<div class="ord"><div class="top"><div><div class="t">'+esc(o.title)+'</div><div class="price">'+esc(o.price)+' per 1,000</div></div>'
-  +'<div>'+(editing?'<button class="ghost" data-delord="'+o.id+'">\u{1F5D1}</button>':'')+'</div></div>'
+  +'<div>'+(editing?'<button class="xdel" data-delord="'+o.id+'" aria-label="Delete">✕</button>':'')+'</div></div>'
   +'<div class="seg">'+STS.map(function(s){return '<button class="'+s[0]+(o.status===s[0]?' on':'')+'" data-st="'+s[0]+'" data-o="'+o.id+'">'+s[1]+'</button>'}).join('')+'</div></div>';
 }
 function render(){
@@ -215,9 +221,9 @@ function render(){
   var h='';
   if(tab==='main'){
     var ks=kids(c),os=S.orders.filter(function(o){return o.node===c});
-    if(!ks.length&&!os.length)h+='<div class="empty"><b>✨</b>'+(c?'Nothing here yet.<br>Tap + to add a section or an order.':'Clean slate.<br>Tap + to create your first title.')+'</div>';
-    if(ks.length){if(c)h+='<div class="sg">Sections</div>';ks.forEach(function(k){var n=kids(k.id).length,m=S.orders.filter(function(o){return o.node===k.id}).length;
-      h+='<div class="sec" data-open="'+k.id+'"><div class="ico'+(k.img?'':' l')+'"'+(k.parent===null&&isAdmin?' data-icon="'+k.id+'"':'')+'>'+(k.img?'<img src="'+k.img+'" alt="">':esc(k.title.charAt(0).toUpperCase()))+'</div><div class="i"><div class="t">'+esc(k.title)+'</div><div class="s">'+n+' sections · '+m+' orders</div></div>'+(editing&&(isAdmin||k.parent!==null)?'<button class="ghost" data-delnode="'+k.id+'">\u{1F5D1}</button>':'')+'<span class="chev">›</span></div>'})}
+    if(!ks.length&&!os.length)h+='<div class="empty"><b>✨</b>'+(!c?'Clean slate.<br>Tap + to create your first title.':(node(c).parent===null?'No sites yet.<br>Tap + to add a website.':'No orders yet.<br>Tap + to add an order.'))+'</div>';
+    if(ks.length){if(c)h+='<div class="sg">Sites</div>';ks.forEach(function(k){var n=kids(k.id).length,m=S.orders.filter(function(o){return o.node===k.id}).length,sub=k.parent===null?(n+(n===1?' site':' sites')):(m+(m===1?' order':' orders'));
+      h+='<div class="sec" data-open="'+k.id+'"><div class="ico'+(k.img?'':' l')+(k.parent===null&&isAdmin&&editing?' ed':'')+'"'+(k.parent===null&&isAdmin&&editing?' data-icon="'+k.id+'"':'')+'>'+(k.img?'<img src="'+k.img+'" alt="">':esc(k.title.charAt(0).toUpperCase()))+'</div><div class="i"><div class="t">'+esc(k.title)+'</div><div class="s">'+sub+'</div></div>'+(editing&&(isAdmin||k.parent!==null)?'<button class="xdel" data-delnode="'+k.id+'" aria-label="Delete">✕</button>':'')+'<span class="chev">›</span></div>'})}
     STS.forEach(function(s){var g=os.filter(function(o){return o.status===s[0]});if(g.length)h+='<div class="sg"><span class="dot" style="background:'+s[2]+'"></span>'+s[1]+'</div>'+g.map(ordHtml).join('')});
   }else{
     var list=S.orders.filter(function(o){return o.status===tab});
@@ -241,8 +247,13 @@ function newSection(){
   document.getElementById('ok').onclick=function(){var v=document.getElementById('f1').value.trim();if(!v)return;S.nodes.push({id:uid(),title:v,parent:cur()});save();closeSheet();render()};
   document.getElementById('x').onclick=closeSheet;
 }
+function newSite(){
+  openSheet('<h3>Add website</h3><input type="url" id="f1" placeholder="Website URL" autocomplete="off" autocapitalize="off" inputmode="url"><button class="btn" id="ok">Add website</button><button class="btn alt" id="x">Cancel</button>');
+  document.getElementById('ok').onclick=function(){var v=document.getElementById('f1').value.trim().replace(/^https?:\/\//i,'').replace(/\/+$/,'');if(!v)return;S.nodes.push({id:uid(),title:v,parent:cur()});save();closeSheet();render()};
+  document.getElementById('x').onclick=closeSheet;
+}
 function newOrder(){
-  openSheet('<h3>New order</h3><input type="text" id="f1" placeholder="Order title"><input type="number" id="f2" inputmode="decimal" placeholder="Price per thousand"><button class="btn" id="ok">Create order</button><button class="btn alt" id="x">Cancel</button>');
+  openSheet('<h3>Add new order</h3><input type="text" id="f1" placeholder="Order title"><input type="number" id="f2" inputmode="decimal" placeholder="Price per thousand"><button class="btn" id="ok">Add order</button><button class="btn alt" id="x">Cancel</button>');
   document.getElementById('ok').onclick=function(){var t=document.getElementById('f1').value.trim(),p=document.getElementById('f2').value.trim();if(!t||!p)return;
     S.orders.push({id:uid(),node:cur(),title:t,price:p,status:'processing',star:false});save();closeSheet();render()};
   document.getElementById('x').onclick=closeSheet;
@@ -311,7 +322,7 @@ function drawCreds(){
   var el=document.getElementById('clist');
   if(!CR.length){el.innerHTML='<div class="empty" style="margin-top:60px"><b>\u{1F510}</b>No logins yet.'+(isAdmin?'<br>Tap + Add to save one.':'')+'</div>';return}
   el.innerHTML=CR.map(function(c){var sh=shown[c.id];
-    return '<div class="ccard"><div class="ct"><span>'+esc(c.site)+'</span>'+(isAdmin?'<button class="ghost" data-cdel="'+c.id+'" aria-label="Delete">\u{1F5D1}</button>':'')+'</div>'
+    return '<div class="ccard"><div class="ct"><span>'+esc(c.site)+'</span>'+(isAdmin?'<button class="xdel" data-cdel="'+c.id+'" aria-label="Delete">✕</button>':'')+'</div>'
     +'<div class="cf"><span class="cl">Email</span><span class="cv">'+esc(c.email)+'</span><button data-ccopy="'+c.id+'" data-f="email">Copy</button></div>'
     +'<div class="cf"><span class="cl">Password</span><span class="cv">'+(sh?esc(c.password):'••••••••')+'</span><button data-cshow="'+c.id+'">'+(sh?'Hide':'Show')+'</button><button data-ccopy="'+c.id+'" data-f="password">Copy</button></div></div>'}).join('');
 }
@@ -354,9 +365,8 @@ mainEl.addEventListener('pointermove',function(e){if(Math.abs(e.clientX-sx)>10||
 ['pointerup','pointercancel','pointerleave'].forEach(function(ev){mainEl.addEventListener(ev,function(){clearTimeout(ht)})});
 mainEl.addEventListener('contextmenu',function(e){if(e.target.closest('.sec'))e.preventDefault()});
 document.getElementById('fab').onclick=function(){
-  if(!cur()){newSection();return}
-  openSheet('<h3>Add</h3><button class="btn" id="a1">New section</button><button class="btn" id="a2">New order</button><button class="btn alt" id="x">Cancel</button>');
-  document.getElementById('a1').onclick=newSection;document.getElementById('a2').onclick=newOrder;document.getElementById('x').onclick=closeSheet;
+  var c=cur();if(!c){newSection();return}
+  if(node(c).parent===null)newSite();else newOrder();
 };
 document.getElementById('veil').onclick=function(e){if(e.target.id==='veil')closeSheet()};
 document.addEventListener('click',function(e){
@@ -375,7 +385,7 @@ document.addEventListener('click',function(e){
   else if(d.tog){openG[d.tog]=!openG[d.tog]}
   else if(d.t){tab=d.t}
   else if(d.delnode){askDel('section and everything inside it',function(){delNode(d.delnode)});return}
-  else if(d.open){path.push(d.open)}
+  else if(d.open){var on=node(d.open);if(on&&depth(on)<=1)path.push(d.open)}
   else if(d.delord){askDel('order',function(){S.orders=S.orders.filter(function(o){return o.id!==d.delord});save()});return}
   else if(d.st){var o2=S.orders.find(function(o){return o.id===d.o});o2.status=d.st;save()}
   render();
