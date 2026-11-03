@@ -129,6 +129,8 @@ html,body{overflow-x:hidden;max-width:100%}
 .exlink{margin-top:6px;color:var(--mute);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;-webkit-user-select:all;user-select:all}
 .exnote{margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.35);color:#fde68a;font-size:14px;line-height:1.45}
 .oid{display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:top;font-size:12px;font-weight:600;letter-spacing:.02em;color:#c4b5fd;background:rgba(139,92,246,.14);border:1px solid rgba(139,92,246,.3);border-radius:8px;padding:2px 8px;margin-bottom:6px;font-variant-numeric:tabular-nums}
+#tabs button.t-processing.on{background:linear-gradient(135deg,#b45309,#f59e0b);box-shadow:0 4px 12px rgba(251,191,36,.4)}
+.idbtn{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:5px 10px;border-radius:9px;border:1px dashed rgba(139,92,246,.55);background:rgba(139,92,246,.1);color:#c4b5fd;font-size:13px;font-weight:600}
 .dragging{position:relative;z-index:6;background:#1d1d2c!important;box-shadow:0 14px 34px rgba(0,0,0,.55);border-color:var(--a1)!important}
 </style>
 </head>
@@ -234,10 +236,10 @@ function kids(p){return S.nodes.filter(function(n){return n.parent===p})}
 function cur(){return path.length?path[path.length-1]:null}
 function chain(id){var c=[],n=node(id);while(n){c.unshift(n);n=n.parent?node(n.parent):null}return c}
 var editing=false;
-var TABS=[['main','Main'],['working','Working'],['partial','Partial'],['failed','Failed']];
-var STS=[['processing','Processing','var(--wait)'],['working','Working','var(--ok)'],['partial','Partial','var(--part)'],['failed','Failed','var(--bad)']];
+var TABS=[['main','Main'],['processing','Testing'],['working','Working'],['partial','Partial'],['failed','Failed']];
+var STS=[['processing','Testing','var(--wait)'],['working','Working','var(--ok)'],['partial','Partial','var(--part)'],['failed','Failed','var(--bad)']];
 function ordHtml(o){
-  return '<div class="ord" data-oid="'+o.id+'" data-grp="'+o.status+'"><div class="top">'+(gripOrders?'<span class="grip" aria-label="Drag to reorder">⋮⋮</span>':'')+'<div style="flex:1;min-width:0">'+(o.oid?'<span class="oid">ID: '+esc(o.oid)+'</span>':'')+'<div class="t">'+esc(o.title)+'</div><div class="price">'+esc(o.price)+' per 1,000</div></div>'
+  return '<div class="ord" data-oid="'+o.id+'" data-grp="'+o.status+'"><div class="top">'+(gripOrders?'<span class="grip" aria-label="Drag to reorder">⋮⋮</span>':'')+'<div style="flex:1;min-width:0">'+(o.oid?'<span class="oid">ID: '+esc(o.oid)+'</span>':'')+'<div class="t">'+esc(o.title)+'</div><div class="price">'+esc(o.price)+' per 1,000</div>'+(editing&&!isViewer?'<button class="idbtn" data-editid="'+o.id+'">'+(o.oid?'✎ Edit ID':'+ Add ID')+'</button>':'')+'</div>'
   +'<div>'+(editing?'<button class="xdel" data-delord="'+o.id+'" aria-label="Delete">✕</button>':'')+'</div></div>'
   +'<div class="seg">'+STS.map(function(s){return '<button class="'+s[0]+(o.status===s[0]?' on':'')+'"'+(isViewer?' disabled':' data-st="'+s[0]+'" data-o="'+o.id+'"')+'>'+s[1]+'</button>'}).join('')+'</div></div>';
 }
@@ -298,6 +300,14 @@ function openIcon(id){
   document.getElementById('up').onclick=function(){fi.click()};
   fi.onchange=function(){var f=fi.files[0];if(!f)return;var r=new FileReader();r.onload=function(){var im=new Image();im.onload=function(){var c=document.createElement('canvas');c.width=c.height=256;var s=Math.min(256/im.width,256/im.height),w=im.width*s,h=im.height*s;c.getContext('2d').drawImage(im,(256-w)/2,(256-h)/2,w,h);n.img=c.toDataURL('image/png');save();closeSheet();render()};im.src=r.result};r.readAsDataURL(f)};
   var rm=document.getElementById('rm');if(rm)rm.onclick=function(){delete n.img;save();closeSheet();render()};
+  document.getElementById('x').onclick=closeSheet;
+}
+function editId(id){
+  var o=S.orders.find(function(x){return x.id===id});if(!o)return;
+  openSheet('<h3>'+(o.oid?'Edit':'Add')+' order ID</h3><p style="color:var(--mute);margin:0 0 12px;font-size:15px">'+esc(o.title)+'</p><input type="text" id="f3" placeholder="Order ID" autocomplete="off" autocapitalize="off"><button class="btn" id="ok">Save</button>'+(o.oid?'<button class="btn alt" id="rm">Remove ID</button>':'')+'<button class="btn alt" id="x">Cancel</button>');
+  var f=document.getElementById('f3');f.value=o.oid||'';
+  document.getElementById('ok').onclick=function(){o.oid=f.value.trim();save();closeSheet();render()};
+  var rm=document.getElementById('rm');if(rm)rm.onclick=function(){o.oid='';save();closeSheet();render()};
   document.getElementById('x').onclick=closeSheet;
 }
 function askDel(what,fn){
@@ -439,12 +449,13 @@ document.getElementById('fab').onclick=function(){
 document.getElementById('veil').onclick=function(e){if(e.target.id==='veil')closeSheet()};
 document.addEventListener('click',function(e){
   if(e.target.closest('.grip'))return;
-  var t=e.target.closest('[data-back],[data-t],[data-open],[data-delnode],[data-delord],[data-st],[data-tog],[data-icon],[data-pen],[data-out],[data-more],[data-logout],[data-mods],[data-creds],[data-exinfo]');
+  var t=e.target.closest('[data-back],[data-t],[data-open],[data-delnode],[data-delord],[data-st],[data-tog],[data-icon],[data-pen],[data-out],[data-more],[data-logout],[data-mods],[data-creds],[data-exinfo],[data-editid]');
   var mn=document.getElementById('menu');if(!t||!t.dataset.more)mn.classList.remove('on');if(!t)return;
   var d=t.dataset;
   if(held){held=false;return}
   if(d.icon){openIcon(d.icon);return}
   else if(d.exinfo){exOpen=!exOpen}
+  else if(d.editid){if(!isViewer)editId(d.editid);return}
   else if(d.pen){if(!isViewer)editing=!editing}
   else if(d.more){mn.classList.toggle('on');return}
   else if(d.logout){askLogout();return}
