@@ -114,6 +114,9 @@ html,body{overflow-x:hidden;max-width:100%}
 #pen{margin-left:0}
 .xdel{flex:none;width:32px;height:32px;border-radius:50%;border:1px solid var(--bad);background:rgba(251,113,133,.12);color:var(--bad);font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}
 .ico.ed{outline:2px dashed var(--a1);outline-offset:3px;border-radius:10px;cursor:pointer}
+.grip{flex:none;width:30px;align-self:stretch;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:20px;letter-spacing:-3px;touch-action:none;-webkit-user-select:none;user-select:none;cursor:grab;margin:-6px 0 -6px -4px}
+.ord .top .grip{align-self:center;height:44px}
+.dragging{position:relative;z-index:6;background:#1d1d2c!important;box-shadow:0 14px 34px rgba(0,0,0,.55);border-color:var(--a1)!important}
 </style>
 </head>
 <body>
@@ -130,7 +133,7 @@ html,body{overflow-x:hidden;max-width:100%}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="icons.js"></script>
 <script>
-var KEY='order-tracker-v1',S={nodes:[],orders:[]},tab='main',path=[],openG={},sb=null,user=null,isAdmin=false,snap={n:{},o:{}},q=Promise.resolve();
+var KEY='order-tracker-v1',S={nodes:[],orders:[]},tab='main',path=[],openG={},sb=null,user=null,isAdmin=false,snap={n:{},o:{}},q=Promise.resolve(),hasPos=false,drag=null,dragging=false,gripOrders=false;
 var SB_URL='https://ttnvbmqtyxbqfyxadjdf.supabase.co',SB_KEY='sb_publishable_1gfteu6dl--6yOo8FKMFow_QmAO7FGE';
 function localOld(){try{var r=JSON.parse(localStorage.getItem(KEY));if(r&&r.nodes&&r.nodes.length)return r}catch(e){}return null}
 function seedDefaults(){
@@ -146,7 +149,7 @@ function seedDefaults(){
 }
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(function(){t.style.display='none'},4500)}
 function depth(n){var d=0;while(n&&n.parent){n=node(n.parent);d++}return d}
-function mkSnap(){var n={},o={};S.nodes.forEach(function(x){n[x.id]=JSON.stringify([x.title,x.parent||null,x.img||null])});S.orders.forEach(function(x){o[x.id]=JSON.stringify([x.node,x.title,String(x.price),x.status,!!x.star])});return{n:n,o:o}}
+function mkSnap(){var n={},o={};S.nodes.forEach(function(x){n[x.id]=JSON.stringify([x.title,x.parent||null,x.img||null,x.pos==null?null:x.pos])});S.orders.forEach(function(x){o[x.id]=JSON.stringify([x.node,x.title,String(x.price),x.status,!!x.star,x.pos==null?null:x.pos])});return{n:n,o:o}}
 function save(){q=q.then(push).catch(function(e){toast('Not saved: '+((e&&e.message)||e));return load().then(render)})}
 async function push(){
   if(!sb||!user)return;
@@ -157,22 +160,26 @@ async function push(){
   Object.keys(snap.o).forEach(function(id){if(!c2.o[id])delO.push(id)});
   if(delO.length){r=await sb.from('orders').delete().in('id',delO);if(r.error)throw r.error}
   if(delN.length){r=await sb.from('nodes').delete().in('id',delN);if(r.error)throw r.error}
-  if(upN.length){upN.sort(function(a,b){return depth(a)-depth(b)});r=await sb.from('nodes').upsert(upN.map(function(n){return{id:n.id,title:n.title,parent:n.parent||null,img:n.img||null}}));if(r.error)throw r.error}
-  if(upO.length){r=await sb.from('orders').upsert(upO.map(function(o){return{id:o.id,node:o.node,title:o.title,price:String(o.price),status:o.status,star:!!o.star}}));if(r.error)throw r.error}
+  if(upN.length){upN.sort(function(a,b){return depth(a)-depth(b)});r=await sb.from('nodes').upsert(upN.map(function(n){var x={id:n.id,title:n.title,parent:n.parent||null,img:n.img||null};if(hasPos)x.pos=n.pos==null?null:n.pos;return x}));if(r.error)throw r.error}
+  if(upO.length){r=await sb.from('orders').upsert(upO.map(function(o){var x={id:o.id,node:o.node,title:o.title,price:String(o.price),status:o.status,star:!!o.star};if(hasPos)x.pos=o.pos==null?null:o.pos;return x}));if(r.error)throw r.error}
   snap=c2;
 }
 async function load(){
   var a=await sb.from('nodes').select('*').order('created_at',{ascending:true});
   var b=await sb.from('orders').select('*').order('created_at',{ascending:true});
   if(a.error)throw a.error;if(b.error)throw b.error;
-  S.nodes=a.data.map(function(r){return{id:r.id,title:r.title,parent:r.parent||null,img:r.img||null}});
-  S.orders=b.data.map(function(r){return{id:r.id,node:r.node,title:r.title,price:r.price,status:r.status,star:!!r.star}});
+  var smp=a.data[0]||b.data[0];if(smp)hasPos=('pos' in smp);
+  S.nodes=a.data.map(function(r){return{id:r.id,title:r.title,parent:r.parent||null,img:r.img||null,pos:r.pos==null?null:r.pos}});
+  S.orders=b.data.map(function(r){return{id:r.id,node:r.node,title:r.title,price:r.price,status:r.status,star:!!r.star,pos:r.pos==null?null:r.pos}});
+  sortAll();
   path=path.filter(function(id){return node(id)});
   snap=mkSnap();
 }
+function byPos(a,b){return (a.pos==null?1e12:a.pos)-(b.pos==null?1e12:b.pos)}
+function sortAll(){S.nodes.sort(byPos);S.orders.sort(byPos)}
 async function stillMember(){if(!user)return false;var r=await sb.from('members').select('user_id').eq('user_id',user.id);return !!(r.error||(r.data&&r.data.length))}
 function kick(msg){document.getElementById('cpage').classList.remove('on');var u=user;user=null;isAdmin=false;S={nodes:[],orders:[]};path=[];editing=false;closeSheet();document.getElementById('main').innerHTML='';sb.auth.signOut().catch(function(){});document.getElementById('login').style.display='flex';document.getElementById('lmsg').textContent=msg||''}
-function refresh(){if(!user||document.hidden||document.getElementById('veil').style.display==='flex')return;q=q.then(async function(){if(!isAdmin&&!(await stillMember())){kick('Your access to this app has been removed.');return}await load();render()}).catch(function(){})}
+function refresh(){if(!user||dragging||document.hidden||document.getElementById('veil').style.display==='flex')return;q=q.then(async function(){if(!isAdmin&&!(await stillMember())){kick('Your access to this app has been removed.');return}await load();render()}).catch(function(){})}
 async function start(u){
   user=u;document.getElementById('login').style.display='none';
   var a=await sb.from('admins').select('user_id').eq('user_id',u.id);
@@ -206,12 +213,13 @@ var editing=false;
 var TABS=[['main','Main'],['working','Working'],['partial','Partial'],['failed','Failed']];
 var STS=[['processing','Processing','var(--wait)'],['working','Working','var(--ok)'],['partial','Partial','var(--part)'],['failed','Failed','var(--bad)']];
 function ordHtml(o){
-  return '<div class="ord"><div class="top"><div><div class="t">'+esc(o.title)+'</div><div class="price">'+esc(o.price)+' per 1,000</div></div>'
+  return '<div class="ord" data-oid="'+o.id+'" data-grp="'+o.status+'"><div class="top">'+(gripOrders?'<span class="grip" aria-label="Drag to reorder">⋮⋮</span>':'')+'<div style="flex:1;min-width:0"><div class="t">'+esc(o.title)+'</div><div class="price">'+esc(o.price)+' per 1,000</div></div>'
   +'<div>'+(editing?'<button class="xdel" data-delord="'+o.id+'" aria-label="Delete">✕</button>':'')+'</div></div>'
   +'<div class="seg">'+STS.map(function(s){return '<button class="'+s[0]+(o.status===s[0]?' on':'')+'" data-st="'+s[0]+'" data-o="'+o.id+'">'+s[1]+'</button>'}).join('')+'</div></div>';
 }
 function render(){
   var c=cur();
+  gripOrders=editing&&tab==='main'&&!!c&&!!node(c)&&node(c).parent!==null;
   document.getElementById('back').style.display=(tab==='main'&&c)?'flex':'none';
   document.getElementById('ttl').textContent=tab==='main'?(c?node(c).title:'Panel Tracker'):TABS.filter(function(t){return t[0]===tab})[0][1];
   document.getElementById('crumb').textContent=(tab==='main'&&c)?chain(c).map(function(n){return n.title}).join('  ›  '):'';
@@ -223,7 +231,7 @@ function render(){
     var ks=kids(c),os=S.orders.filter(function(o){return o.node===c});
     if(!ks.length&&!os.length)h+='<div class="empty"><b>✨</b>'+(!c?'Clean slate.<br>Tap + to create your first title.':(node(c).parent===null?'No sites yet.<br>Tap + to add a website.':'No orders yet.<br>Tap + to add an order.'))+'</div>';
     if(ks.length){if(c)h+='<div class="sg">Sites</div>';ks.forEach(function(k){var n=kids(k.id).length,m=S.orders.filter(function(o){return o.node===k.id}).length,sub=k.parent===null?(n+(n===1?' site':' sites')):(m+(m===1?' order':' orders'));
-      h+='<div class="sec" data-open="'+k.id+'"><div class="ico'+(k.img?'':' l')+(k.parent===null&&isAdmin&&editing?' ed':'')+'"'+(k.parent===null&&isAdmin&&editing?' data-icon="'+k.id+'"':'')+'>'+(k.img?'<img src="'+k.img+'" alt="">':esc(k.title.charAt(0).toUpperCase()))+'</div><div class="i"><div class="t">'+esc(k.title)+'</div><div class="s">'+sub+'</div></div>'+(editing&&(isAdmin||k.parent!==null)?'<button class="xdel" data-delnode="'+k.id+'" aria-label="Delete">✕</button>':'')+'<span class="chev">›</span></div>'})}
+      h+='<div class="sec" data-open="'+k.id+'">'+(editing&&k.parent!==null?'<span class="grip" aria-label="Drag to reorder">⋮⋮</span>':'')+'<div class="ico'+(k.img?'':' l')+(k.parent===null&&isAdmin&&editing?' ed':'')+'"'+(k.parent===null&&isAdmin&&editing?' data-icon="'+k.id+'"':'')+'>'+(k.img?'<img src="'+k.img+'" alt="">':esc(k.title.charAt(0).toUpperCase()))+'</div><div class="i"><div class="t">'+esc(k.title)+'</div><div class="s">'+sub+'</div></div>'+(editing&&(isAdmin||k.parent!==null)?'<button class="xdel" data-delnode="'+k.id+'" aria-label="Delete">✕</button>':'')+'<span class="chev">›</span></div>'})}
     STS.forEach(function(s){var g=os.filter(function(o){return o.status===s[0]});if(g.length)h+='<div class="sg"><span class="dot" style="background:'+s[2]+'"></span>'+s[1]+'</div>'+g.map(ordHtml).join('')});
   }else{
     var list=S.orders.filter(function(o){return o.status===tab});
@@ -357,19 +365,52 @@ function openRename(id){
 var mainEl=document.getElementById('main');
 mainEl.addEventListener('pointerdown',function(e){
   held=false;clearTimeout(ht);
-  var s=e.target.closest('.sec');if(!s||e.target.closest('button')||(!isAdmin&&!cur()))return;
+  var s=e.target.closest('.sec');if(!s||e.target.closest('button')||e.target.closest('.grip')||(!isAdmin&&!cur()))return;
   var id=s.dataset.open;sx=e.clientX;sy=e.clientY;
   ht=setTimeout(function(){held=true;openRename(id)},550);
 });
 mainEl.addEventListener('pointermove',function(e){if(Math.abs(e.clientX-sx)>10||Math.abs(e.clientY-sy)>10)clearTimeout(ht)});
 ['pointerup','pointercancel','pointerleave'].forEach(function(ev){mainEl.addEventListener(ev,function(){clearTimeout(ht)})});
 mainEl.addEventListener('contextmenu',function(e){if(e.target.closest('.sec'))e.preventDefault()});
+mainEl.addEventListener('pointerdown',function(e){
+  var g=e.target.closest('.grip');if(!g)return;
+  e.preventDefault();e.stopPropagation();clearTimeout(ht);
+  var el=g.closest('.sec,.ord');if(!el)return;
+  var sel=el.classList.contains('sec')?'.sec':'.ord[data-grp="'+el.dataset.grp+'"]';
+  drag={el:el,sel:sel,top0:el.offsetTop,py:e.pageY,h:el.offsetHeight};dragging=true;
+  try{g.setPointerCapture(e.pointerId)}catch(x){}
+  el.classList.add('dragging');
+});
+document.addEventListener('pointermove',function(e){
+  if(!drag)return;e.preventDefault();
+  var el=drag.el,want=drag.top0+(e.pageY-drag.py),mid=want+drag.h/2,moved=true,guard=0;
+  while(moved&&guard++<50){moved=false;
+    var list=Array.from(mainEl.querySelectorAll(drag.sel)),i=list.indexOf(el),p=list[i-1],n=list[i+1];
+    if(p&&mid<p.offsetTop+p.offsetHeight/2){p.before(el);moved=true}
+    else if(n&&mid>n.offsetTop+n.offsetHeight/2){n.after(el);moved=true}}
+  el.style.transform='translateY('+(want-el.offsetTop)+'px)';
+  if(e.clientY<90)window.scrollBy(0,-10);else if(e.clientY>innerHeight-90)window.scrollBy(0,10);
+},{passive:false});
+function endDrag(){
+  if(!drag)return;
+  var el=drag.el,list=Array.from(mainEl.querySelectorAll(drag.sel));
+  el.classList.remove('dragging');el.style.transform='';
+  list.forEach(function(x,i){
+    if(x.classList.contains('sec')){var n=node(x.dataset.open);if(n)n.pos=i+1}
+    else{var o=S.orders.find(function(o){return o.id===x.dataset.oid});if(o)o.pos=i+1}});
+  drag=null;setTimeout(function(){dragging=false},60);
+  sortAll();save();render();
+  if(!hasPos)toast('New order not saved yet. Run the reorder SQL in Supabase first.');
+}
+document.addEventListener('pointerup',endDrag);
+document.addEventListener('pointercancel',endDrag);
 document.getElementById('fab').onclick=function(){
   var c=cur();if(!c){newSection();return}
   if(node(c).parent===null)newSite();else newOrder();
 };
 document.getElementById('veil').onclick=function(e){if(e.target.id==='veil')closeSheet()};
 document.addEventListener('click',function(e){
+  if(e.target.closest('.grip'))return;
   var t=e.target.closest('[data-back],[data-t],[data-open],[data-delnode],[data-delord],[data-st],[data-tog],[data-icon],[data-pen],[data-out],[data-more],[data-logout],[data-mods],[data-creds]');
   var mn=document.getElementById('menu');if(!t||!t.dataset.more)mn.classList.remove('on');if(!t)return;
   var d=t.dataset;
