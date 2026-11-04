@@ -121,3 +121,8 @@
 .ot-in::placeholder{color:rgba(255,255,255,.38);font-weight:600}
 .ot-big{all:unset;cursor:pointer;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:12px;padding:48px 16px;border-radius:22px;border:2px dashed rgba(255,255,255,.18);text-align:center;font-weight:800;font-size:18px;color:rgba(255,255,255,.85)}
 .ot-big i{font-style:normal;display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:var(--ot-green);color:#06210F;font:900 38px/1 var(--ot-font);box-shadow:0 8px 26px rgba(27,224,127,.45)}
+.ot-who{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:-4px -16px 0;padding:2px 16px}
+.ot-who::-webkit-scrollbar{display:none}
+.ot-who button{flex:none;border:1.5px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);border-radius:999px;padding:7px 14px;font-weight:800;font-size:14.5px;color:rgba(255,255,255,.8)}
+.ot-who button[aria-pressed="true"]{background:#fff;color:#0B1A3A;border-color:#fff}
+.ot-by{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:rgba(79,160,255,.18);color:#BFDCFF;letter-spacing:.02em;text-transform:none;font-weight:700}

@@ -163,6 +163,47 @@ body.ot-on::before{background:#0B1A26}
 #otnote div{border-radius:14px;padding:10px 14px;background:rgba(255,196,0,.12);border:1px solid rgba(255,196,0,.45);color:#FFD76A;font:600 14px/1.4 "Geist",system-ui,sans-serif}
 body.swiping,body.swiping *{-webkit-user-select:none!important;user-select:none!important}
 body.swiping .scr *{pointer-events:none!important}
+/* menu reachable from both screens */
+#menu{position:fixed;top:calc(env(safe-area-inset-top,0px) + 62px);right:max(14px,calc(50vw - 306px));z-index:40}
+.ohead{position:relative}
+.omore{position:absolute;top:12px;right:14px;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.08);color:#fff;font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}
+/* members page */
+#mpage{display:none;position:fixed;inset:0;z-index:35;background:var(--bg);overflow-y:auto;padding-top:env(safe-area-inset-top,0px)}
+#mpage.on{display:block}
+#mbody{max-width:640px;margin:0 auto;padding:14px 14px 60px}
+.madd{padding:14px;border-radius:18px;background:var(--card);border:1px solid var(--line);margin-bottom:22px}
+.mh2{font-weight:700;font-size:17px;margin-bottom:10px}
+.rseg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:0 0 6px}
+.rseg button{padding:10px 0;border-radius:12px;border:1px solid var(--line);background:none;color:var(--mute);font-size:15px;font-weight:600}
+.rseg button.on{background:rgba(139,92,246,.2);border-color:var(--a1);color:#fff}
+.mmsg{color:var(--bad);font-size:14.5px;margin-top:8px;line-height:1.45}
+.mmsg a,.perr a{color:var(--a2)}
+.msec{margin-bottom:20px}
+.msh{font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:0 4px 8px}
+.mrow2{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:10px 14px;margin-bottom:8px;border-radius:14px;background:var(--card);border:1px solid var(--line);color:var(--ink);font-size:16px}
+.mav{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:15px;color:#fff;background:rgba(255,255,255,.12)}
+.s-owner .mav{background:rgba(251,191,36,.18)}
+.s-mod .mav{background:linear-gradient(135deg,#7c3aed,#a78bfa)}
+.s-user .mav{background:linear-gradient(135deg,#0891b2,#22d3ee)}
+.s-viewer .mav{background:rgba(255,255,255,.14);color:var(--mute)}
+.mrow2 .me{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow2 .chev{color:var(--mute);font-size:20px}
+.mrow2 .rtag{flex:none;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:rgba(251,191,36,.16);color:var(--wait)}
+.mnone{color:var(--mute);font-size:14.5px;padding:2px 4px 4px}
+.rpick{display:block;width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.rpick b{display:block;font-size:16.5px}
+.rpick small{display:block;color:var(--mute);font-size:13.5px;margin-top:2px}
+.rpick.on{border-color:var(--a2);background:rgba(34,211,238,.1)}
+/* approval */
+.apv{display:block;width:100%;margin-top:10px;padding:10px 0;border-radius:12px;border:1px dashed rgba(52,211,153,.6);background:rgba(52,211,153,.07);color:var(--ok);font-size:14.5px;font-weight:600}
+.apv.on{border-style:solid;background:rgba(52,211,153,.16)}
+.apvtag{margin-top:10px;font-size:13.5px;font-weight:600;color:var(--wait)}
+.apvtag.on{color:var(--ok)}
+/* step-by-step picker */
+.wzc{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.wz{padding:13px 10px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:16px;font-weight:600}
+.wz.on{border-color:var(--a2);background:rgba(34,211,238,.14)}
+.pk-step{font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--a2);margin-bottom:2px}
 /* service picker */
 .pk-tabs{display:flex;gap:6px;overflow-x:auto;margin:0 0 12px;scrollbar-width:none}
 .pk-tabs::-webkit-scrollbar{display:none}
@@ -184,16 +225,18 @@ body.swiping .scr *{pointer-events:none!important}
 </style>
 </head>
 <body class="ot-on">
-<div id="oscreen" class="scr"><div class="ohead"><h1>Orders Tracker</h1><div class="dots"><button data-scr="orders" aria-label="Orders Tracker"></button><button data-scr="panels" aria-label="Panels Tracker"></button></div></div><div id="otnote"><div>Orders are saved on this phone only for now. One quick setup step in Supabase will sync them for everyone.</div></div><div id="otroot"></div></div>
+<div id="oscreen" class="scr"><div class="ohead"><button class="omore" data-more="1" aria-label="More">&#8943;</button><h1>Orders Tracker</h1><div class="dots"><button data-scr="orders" aria-label="Orders Tracker"></button><button data-scr="panels" aria-label="Panels Tracker"></button></div></div><div id="otnote"><div>Orders are saved on this phone only for now. One quick setup step in Supabase will sync them for everyone.</div></div><div id="otroot"></div></div>
 <div id="pscreen" class="scr" style="display:none">
 <div id="top">
-  <div class="hrow"><button id="back" data-back="1" aria-label="Back">&#8592;</button><div class="tw"><h1 id="ttl">Panel Tracker</h1><div id="crumb"></div></div><button id="pen" data-pen="1" aria-label="Edit mode">&#9998;</button><button id="more" data-more="1" aria-label="More">&#8943;</button><div id="menu"><button class="mi" id="credsBtn" data-creds="1">Login credentials</button><button class="mi" id="modsBtn" data-mods="1" style="display:none">Mods</button><button data-logout="1">Log out</button></div></div>
+  <div class="hrow"><button id="back" data-back="1" aria-label="Back">&#8592;</button><div class="tw"><h1 id="ttl">Panel Tracker</h1><div id="crumb"></div></div><button id="pen" data-pen="1" aria-label="Edit mode">&#9998;</button><button id="more" data-more="1" aria-label="More">&#8943;</button></div>
   <div class="dots"><button data-scr="orders" aria-label="Orders Tracker"></button><button data-scr="panels" aria-label="Panels Tracker"></button></div>
   <div id="tabs"></div>
 </div>
 <div id="main"><div class="empty">Loading...</div></div>
 <button id="fab" aria-label="Add">+</button>
 </div>
+<div id="menu"><button class="mi" id="credsBtn" data-creds="1">Login credentials</button><button class="mi" id="modsBtn" data-mods="1" style="display:none">Members</button><button data-logout="1">Log out</button></div>
+<div id="mpage"><div class="chead"><button class="cb" data-mclose="1" aria-label="Back">&#8592;</button><h2>Members</h2></div><div id="mbody"></div></div>
 <div id="cpage"><div class="chead"><button class="cb" data-cclose="1" aria-label="Back">&#8592;</button><h2>Logins</h2><button class="btn" id="cadd" data-cadd="1" style="display:none;width:auto;margin:0;padding:10px 14px;font-size:15px">+ Add</button></div><div id="clist"></div></div>
 <div id="veil"><div id="sheet"></div></div>
 <div id="login"><div class="lbox"><h2 class="lt">Panel Tracker</h2><p class="lp">Sign in to continue</p><input type="email" id="lem" placeholder="Email" autocomplete="username"><input type="password" id="lpw" placeholder="Password" autocomplete="current-password"><button class="btn" id="lgo">Sign in</button><button class="fl" id="lfg">Forgot password?</button><div id="lmsg"></div></div></div>
@@ -202,7 +245,7 @@ body.swiping .scr *{pointer-events:none!important}
 <script src="icons.js"></script>
 <script src="order-tracker.js"></script>
 <script>
-var KEY='order-tracker-v1',S={nodes:[],orders:[]},tab='main',path=[],openG={},sb=null,user=null,isAdmin=false,snap={n:{},o:{}},q=Promise.resolve(),hasPos=false,drag=null,dragging=false,gripOrders=false,isViewer=false,exOpen=false,hasOid=false,hasSvc=false;
+var KEY='order-tracker-v1',S={nodes:[],orders:[]},tab='main',path=[],openG={},sb=null,user=null,isAdmin=false,snap={n:{},o:{}},q=Promise.resolve(),hasPos=false,drag=null,dragging=false,gripOrders=false,isViewer=false,exOpen=false,hasOid=false,hasSvc=false,hasAppr=false,role='viewer',MEM=[];
 var SB_URL='https://ttnvbmqtyxbqfyxadjdf.supabase.co',SB_KEY='sb_publishable_1gfteu6dl--6yOo8FKMFow_QmAO7FGE';
 function localOld(){try{var r=JSON.parse(localStorage.getItem(KEY));if(r&&r.nodes&&r.nodes.length)return r}catch(e){}return null}
 function seedDefaults(){
@@ -218,7 +261,7 @@ function seedDefaults(){
 }
 function toast(m,good){var t=document.getElementById('toast');t.textContent=m;t.style.display='block';t.style.borderColor=good?'var(--ok)':'';t.style.background=good?'#0f2a20':'';clearTimeout(toast.h);toast.h=setTimeout(function(){t.style.display='none'},4500)}
 function depth(n){var d=0;while(n&&n.parent){n=node(n.parent);d++}return d}
-function mkSnap(){var n={},o={};S.nodes.forEach(function(x){n[x.id]=JSON.stringify([x.title,x.parent||null,x.img||null,x.pos==null?null:x.pos])});S.orders.forEach(function(x){o[x.id]=JSON.stringify([x.node,x.title,String(x.price),x.status,!!x.star,x.pos==null?null:x.pos,x.oid||'',x.svc||''])});return{n:n,o:o}}
+function mkSnap(){var n={},o={};S.nodes.forEach(function(x){n[x.id]=JSON.stringify([x.title,x.parent||null,x.img||null,x.pos==null?null:x.pos])});S.orders.forEach(function(x){o[x.id]=JSON.stringify([x.node,x.title,String(x.price),x.status,!!x.star,x.pos==null?null:x.pos,x.oid||'',x.svc||'',!!x.approved])});return{n:n,o:o}}
 function save(){q=q.then(push).catch(function(e){toast('Not saved: '+((e&&e.message)||e));return load().then(render)})}
 async function push(){
   if(!sb||!user)return;
@@ -231,8 +274,8 @@ async function push(){
   if(delN.length){r=await sb.from('nodes').delete().in('id',delN);if(r.error)throw r.error}
   if(upN.length){upN.sort(function(a,b){return depth(a)-depth(b)});r=await sb.from('nodes').upsert(upN.map(function(n){var x={id:n.id,title:n.title,parent:n.parent||null,img:n.img||null};if(hasPos)x.pos=n.pos==null?null:n.pos;return x}));if(r.error)throw r.error}
   if(upO.length){
-    var wO=hasOid||upO.some(function(o){return !!o.oid}),wS=hasSvc||upO.some(function(o){return !!o.svc});
-    var rows=function(io,is){return upO.map(function(o){var x={id:o.id,node:o.node,title:o.title,price:String(o.price),status:o.status,star:!!o.star};if(hasPos)x.pos=o.pos==null?null:o.pos;if(io)x.order_id=o.oid||null;if(is)x.service_id=o.svc||null;return x})};
+    var wO=hasOid||upO.some(function(o){return !!o.oid}),wS=hasSvc||upO.some(function(o){return !!o.svc}),wA=isAdmin&&hasAppr;
+    var rows=function(io,is){return upO.map(function(o){var x={id:o.id,node:o.node,title:o.title,price:String(o.price),status:o.status,star:!!o.star};if(hasPos)x.pos=o.pos==null?null:o.pos;if(io)x.order_id=o.oid||null;if(is)x.service_id=o.svc||null;if(wA)x.approved=!!o.approved;return x})};
     r=await sb.from('orders').upsert(rows(wO,wS));
     if(r.error&&(wO||wS)&&/order_id|service_id/.test(r.error.message||'')){
       var mo=/order_id/.test(r.error.message);var ms=/service_id/.test(r.error.message);
@@ -248,30 +291,33 @@ async function load(){
   var b=await sb.from('orders').select('*').order('created_at',{ascending:true});
   if(a.error)throw a.error;if(b.error)throw b.error;
   var smp=a.data[0]||b.data[0];if(smp)hasPos=('pos' in smp);
-  if(b.data[0]){hasOid=('order_id' in b.data[0]);hasSvc=('service_id' in b.data[0])}
+  if(b.data[0]){hasOid=('order_id' in b.data[0]);hasSvc=('service_id' in b.data[0]);hasAppr=('approved' in b.data[0])}
   S.nodes=a.data.map(function(r){return{id:r.id,title:r.title,parent:r.parent||null,img:r.img||null,pos:r.pos==null?null:r.pos}});
-  S.orders=b.data.map(function(r){return{id:r.id,node:r.node,title:r.title,price:r.price,status:r.status,star:!!r.star,pos:r.pos==null?null:r.pos,oid:r.order_id||'',svc:r.service_id||''}});
+  S.orders=b.data.map(function(r){return{id:r.id,node:r.node,title:r.title,price:r.price,status:r.status,star:!!r.star,pos:r.pos==null?null:r.pos,oid:r.order_id||'',svc:r.service_id||'',approved:!!r.approved}});
   sortAll();
   path=path.filter(function(id){return node(id)});
   snap=mkSnap();
 }
 function byPos(a,b){return (a.pos==null?1e12:a.pos)-(b.pos==null?1e12:b.pos)}
 function sortAll(){S.nodes.sort(byPos);S.orders.sort(byPos)}
-async function memberRow(){if(!user)return null;var r=await sb.from('members').select('*').eq('user_id',user.id);if(r.error)return {role:'mod'};return (r.data&&r.data[0])||null}
-async function stillMember(){var m=await memberRow();if(!m)return false;var v=m.role==='viewer';if(v!==isViewer){isViewer=v;if(v)editing=false;applyRole();render();mountOrders()}return true}
-function applyRole(){document.getElementById('pen').style.display=isViewer?'none':'flex';document.getElementById('credsBtn').style.display=isViewer?'none':'block'}
-function kick(msg){document.getElementById('cpage').classList.remove('on');isViewer=false;applyRole();var u=user;user=null;isAdmin=false;S={nodes:[],orders:[]};path=[];editing=false;closeSheet();document.getElementById('main').innerHTML='';if(otApi){otApi.destroy();otApi=null}sb.auth.signOut().catch(function(){});document.getElementById('login').style.display='flex';document.getElementById('lmsg').textContent=msg||''}
-function refresh(){if(!user||dragging||document.hidden||document.getElementById('veil').style.display==='flex')return;q=q.then(async function(){if(!isAdmin&&!(await stillMember())){kick('Your access to this app has been removed.');return}await load();render()}).catch(function(){})}
+async function memberRow(){if(!user)return null;var r=await sb.from('members').select('*').eq('user_id',user.id);if(r.error)return {unk:true};return (r.data&&r.data[0])||null}
+async function stillMember(){var m=await memberRow();if(!m)return false;if(m.unk)return true;var nr=m.role||'viewer';if(nr!==role)setRole(nr);return true}
+function setRole(nr){role=nr;isViewer=!canPanels();if(isViewer){editing=false;if(scr!=='orders')setScreen('orders')}applyRole();render();mountOrders()}
+function applyRole(){var p=canPanels();document.getElementById('pen').style.display=p?'flex':'none';document.getElementById('credsBtn').style.display=p?'block':'none';document.getElementById('modsBtn').style.display=isAdmin?'block':'none';document.querySelectorAll('.dots').forEach(function(d){d.style.display=p?'flex':'none'})}
+function kick(msg){document.getElementById('cpage').classList.remove('on');document.getElementById('mpage').classList.remove('on');if(scr!=='orders')setScreen('orders');role='viewer';MEM=[];isViewer=true;applyRole();var u=user;user=null;isAdmin=false;S={nodes:[],orders:[]};path=[];editing=false;closeSheet();document.getElementById('main').innerHTML='';if(otApi){otApi.destroy();otApi=null}sb.auth.signOut().catch(function(){});document.getElementById('login').style.display='flex';document.getElementById('lmsg').textContent=msg||''}
+function refresh(){if(!user||dragging||document.hidden||document.getElementById('veil').style.display==='flex')return;q=q.then(async function(){if(!isAdmin&&!(await stillMember())){kick('Your access to this app has been removed.');return}if(canPanels()){await load();render()}if(isAdmin)await loadMem()}).catch(function(){})}
 async function start(u){
   user=u;document.getElementById('login').style.display='none';
   var a=await sb.from('admins').select('user_id').eq('user_id',u.id);
   isAdmin=!!(a.data&&a.data.length);
   document.getElementById('modsBtn').style.display=isAdmin?'block':'none';
-  isViewer=false;
-  if(!isAdmin&&!(await stillMember()))return kick('Your access to this app has been removed.');
+  role=isAdmin?'owner':'viewer';
+  if(!isAdmin){var mr=await memberRow();if(!mr)return kick('Your access to this app has been removed.');role=mr.unk?'viewer':(mr.role||'viewer')}
+  isViewer=!canPanels();
   applyRole();
+  if(isAdmin)await loadMem();
   mountOrders();
-  await load();
+  if(canPanels())await load();
   if(!S.nodes.length&&isAdmin){
     var old=localOld();
     if(old){S.nodes=old.nodes.map(function(n){return{id:n.id,title:n.title,parent:n.parent||null,img:n.img||null}});S.orders=(old.orders||[]).map(function(o){return{id:o.id,node:o.node,title:o.title,price:o.price,status:o.status||'processing',star:!!o.star}})}
@@ -300,7 +346,7 @@ var STS=[['processing','Testing','var(--wait)'],['working','Working','var(--ok)'
 function ordHtml(o){
   return '<div class="ord" data-oid="'+o.id+'" data-grp="'+o.status+'"><div class="top">'+(gripOrders?'<span class="grip" aria-label="Drag to reorder">\u22ee\u22ee</span>':'')+'<div style="flex:1;min-width:0">'+(o.oid?'<span class="oid">ID: '+esc(o.oid)+'</span>':'')+(o.svc?'<span class="svc">Service '+esc(o.svc)+'</span>':'')+'<div class="t">'+esc(o.title)+'</div><div class="price">'+esc(o.price)+' per 1,000</div>'+(editing&&!isViewer?'<button class="idbtn" data-editid="'+o.id+'">\u270e Edit details</button>':'')+'</div>'
   +'<div>'+(editing?'<button class="xdel" data-delord="'+o.id+'" aria-label="Delete">\u2715</button>':'')+'</div></div>'
-  +ownerActs(o)
+  +ownerActs(o)+apvHtml(o)
   +'<div class="seg">'+STS.map(function(s){return '<button class="'+s[0]+(o.status===s[0]?' on':'')+'"'+(isViewer?' disabled':' data-st="'+s[0]+'" data-o="'+o.id+'"')+'>'+s[1]+'</button>'}).join('')+'</div></div>';
 }
 function render(){
@@ -309,16 +355,16 @@ function render(){
   document.getElementById('back').style.display=(tab==='main'&&c)?'flex':'none';
   document.getElementById('ttl').textContent=tab==='main'?(c?node(c).title:'Panels Tracker'):TABS.filter(function(t){return t[0]===tab})[0][1];
   document.getElementById('crumb').textContent=(tab==='main'&&c)?chain(c).map(function(n){return n.title}).join('  \u203a  '):'';
-  document.getElementById('fab').style.display=(tab==='main'&&!isViewer&&(c||isAdmin))?'block':'none';
+  document.getElementById('fab').style.display=(tab==='main'&&(isAdmin||(role==='mod'&&!!c&&!!node(c)&&node(c).parent!==null)))?'block':'none';
   document.getElementById('pen').classList.toggle('on',editing);
   document.getElementById('tabs').innerHTML=TABS.map(function(t){return '<button data-t="'+t[0]+'" class="t-'+t[0]+(tab===t[0]?' on':'')+'">'+t[1]+'</button>'}).join('');
   var h='';
   if(tab==='main'){
     var ks=kids(c),os=S.orders.filter(function(o){return o.node===c});
     if(c&&node(c)&&node(c).parent!==null)h+='<div class="excard"><div class="exhead">Example Link<button class="exinfo'+(exOpen?' on':'')+'" data-exinfo="1" aria-label="About this link">?</button></div><div class="exlink">https://www.instagram.com/p/........../</div>'+(exOpen?'<div class="exnote">Orders must use this link format. Links in any other format may cause the order to fail.</div>':'')+'</div>';
-    if(!ks.length&&!os.length)h+='<div class="empty"><b>\u2728</b>'+(!c?'Clean slate.'+(isViewer?'':'<br>Tap + to create your first title.'):(node(c).parent===null?'No sites yet.'+(isViewer?'':'<br>Tap + to add a website.'):'No orders yet.'+(isViewer?'':'<br>Tap + to add an order.')))+'</div>';
+    if(!ks.length&&!os.length)h+='<div class="empty"><b>\u2728</b>'+(!c?'Clean slate.'+(isAdmin?'<br>Tap + to create your first title.':''):(node(c).parent===null?'No sites yet.'+(isAdmin?'<br>Tap + to add a website.':''):'No orders yet.'+(isViewer?'':'<br>Tap + to add an order.')))+'</div>';
     if(ks.length){if(c)h+='<div class="sg">Sites</div>';ks.forEach(function(k){var n=kids(k.id).length,m=S.orders.filter(function(o){return o.node===k.id}).length,sub=k.parent===null?(n+(n===1?' site':' sites')):(m+(m===1?' order':' orders'));
-      h+='<div class="sec" data-open="'+k.id+'">'+(editing&&k.parent!==null?'<span class="grip" aria-label="Drag to reorder">\u22ee\u22ee</span>':'')+'<div class="ico'+(k.img?'':' l')+(k.parent===null&&isAdmin&&editing?' ed':'')+'"'+(k.parent===null&&isAdmin&&editing?' data-icon="'+k.id+'"':'')+'>'+(k.img?'<img src="'+k.img+'" alt="">':esc(k.title.charAt(0).toUpperCase()))+'</div><div class="i"><div class="t">'+esc(k.title)+'</div><div class="s">'+sub+'</div></div>'+(editing&&(isAdmin||k.parent!==null)?'<button class="xdel" data-delnode="'+k.id+'" aria-label="Delete">\u2715</button>':'')+'<span class="chev">\u203a</span></div>'})}
+      h+='<div class="sec" data-open="'+k.id+'">'+(editing&&isAdmin&&k.parent!==null?'<span class="grip" aria-label="Drag to reorder">\u22ee\u22ee</span>':'')+'<div class="ico'+(k.img?'':' l')+(k.parent===null&&isAdmin&&editing?' ed':'')+'"'+(k.parent===null&&isAdmin&&editing?' data-icon="'+k.id+'"':'')+'>'+(k.img?'<img src="'+k.img+'" alt="">':esc(k.title.charAt(0).toUpperCase()))+'</div><div class="i"><div class="t">'+esc(k.title)+'</div><div class="s">'+sub+'</div></div>'+(editing&&isAdmin?'<button class="xdel" data-delnode="'+k.id+'" aria-label="Delete">\u2715</button>':'')+'<span class="chev">\u203a</span></div>'})}
     STS.forEach(function(s){var g=os.filter(function(o){return o.status===s[0]});if(g.length)h+='<div class="sg"><span class="dot" style="background:'+s[2]+'"></span>'+s[1]+'</div>'+g.map(ordHtml).join('')});
   }else{
     var list=S.orders.filter(function(o){return o.status===tab});
@@ -362,11 +408,15 @@ function openIcon(id){
   var rm=document.getElementById('rm');if(rm)rm.onclick=function(){delete n.img;save();closeSheet();render()};
   document.getElementById('x').onclick=closeSheet;
 }
-var PANELS=['naizop.com','peakerr.com','smbpanel.net','justanotherpanel.com','morethanpanel.com','bulkfollows.com','smmfollows.com'];
 function siteOf(o){var n=node(o.node);return n?String(n.title).toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0]:''}
-function isPanel(d){return PANELS.indexOf(d)>=0}
+function apvHtml(o){
+  if(o.status!=='working')return '';
+  if(isAdmin)return '<button class="apv'+(o.approved?' on':'')+'" data-apv="'+o.id+'">'+(o.approved?'\u2713 Approved \u00b7 users can pick this':'Approve for users')+'</button>';
+  if(role==='mod')return '<div class="apvtag'+(o.approved?' on':'')+'">'+(o.approved?'\u2713 Approved for users':'Waiting for owner approval')+'</div>';
+  return '';
+}
 function ownerActs(o){
-  if(!isAdmin||isViewer||!isPanel(siteOf(o)))return '';
+  if(!isAdmin||isViewer||!siteOf(o))return '';
   var b='';
   if(o.svc)b+='<button class="oact go" data-place="'+o.id+'">Place order</button>';
   if(o.oid&&/^\d+$/.test(o.oid))b+='<button class="oact" data-check="'+o.id+'">Check status</button>';
@@ -439,22 +489,6 @@ function askLogout(){
   document.getElementById('yes').onclick=function(){closeSheet();sb.auth.signOut().then(function(){location.reload()})};
   document.getElementById('x').onclick=closeSheet;
 }
-async function openMods(){
-  openSheet('<h3>Mods</h3><div id="mlist" style="color:var(--mute);margin-bottom:12px">Loading...</div><input type="email" id="madd" placeholder="Email address"><div style="display:flex;gap:8px"><button class="btn" id="mgo">Add mod</button><button class="btn alt" id="mgv">Add viewer</button></div><div id="mmsg" style="color:var(--bad);margin-top:10px;font-size:15px"></div><button class="btn alt" id="x">Close</button>');
-  document.getElementById('x').onclick=closeSheet;
-  async function addM(role){var e=document.getElementById('madd').value.trim(),m=document.getElementById('mmsg');m.className='';m.textContent='';if(!e){m.textContent='Type an email first.';return}var r=await sb.rpc('add_member',{p_email:e,p_role:role});if(r.error){m.textContent=r.error.message;return}openMods()}
-  document.getElementById('mgo').onclick=function(){addM('mod')};
-  document.getElementById('mgv').onclick=function(){addM('viewer')};
-  var r=await sb.from('members').select('*').order('added_at',{ascending:true});
-  var el=document.getElementById('mlist');if(!el)return;
-  if(r.error){el.textContent='Could not load mods: '+r.error.message;return}
-  if(!r.data.length){el.textContent='No mods yet.';return}
-  el.innerHTML=r.data.map(function(x){var v=x.role==='viewer';return '<div class="mrow"><span>'+esc(x.email||x.user_id)+'</span><span class="rtag'+(v?' v':'')+'">'+(v?'Viewer':'Mod')+'</span><button data-rm="'+x.user_id+'" data-em="'+esc(x.email||'')+'" aria-label="Revoke">\u2715</button></div>'}).join('');
-  el.onclick=function(ev){var b=ev.target.closest('[data-rm]');if(!b)return;var id=b.dataset.rm,em=b.dataset.em;
-    openSheet('<h3>Revoke access?</h3><p style="color:var(--mute);margin:0 0 14px">'+esc(em)+' will be logged out and locked out of the app.</p><button class="btn dangerbtn" id="yes">Yes, revoke</button><button class="btn alt" id="x">No</button>');
-    document.getElementById('x').onclick=openMods;
-    document.getElementById('yes').onclick=async function(){var d=await sb.from('members').delete().eq('user_id',id);if(d.error)toast('Not revoked: '+d.error.message);openMods()}};
-}
 async function forgotPw(){
   var em=document.getElementById('lem').value.trim(),m=document.getElementById('lmsg');m.className='';
   if(!em){m.textContent='Type your email above first, then tap Forgot password.';return}
@@ -518,7 +552,7 @@ function openRename(id){
 var mainEl=document.getElementById('main');
 mainEl.addEventListener('pointerdown',function(e){
   held=false;clearTimeout(ht);
-  var s=e.target.closest('.sec');if(!s||e.target.closest('button')||e.target.closest('.grip')||isViewer||(!isAdmin&&!cur()))return;
+  var s=e.target.closest('.sec');if(!s||e.target.closest('button')||e.target.closest('.grip')||!isAdmin)return;
   var id=s.dataset.open;sx=e.clientX;sy=e.clientY;
   ht=setTimeout(function(){held=true;openRename(id)},550);
 });
@@ -564,11 +598,12 @@ document.getElementById('fab').onclick=function(){
 document.getElementById('veil').onclick=function(e){if(e.target.id==='veil')closeSheet()};
 document.addEventListener('click',function(e){
   if(e.target.closest('.grip'))return;
-  var t=e.target.closest('[data-back],[data-t],[data-open],[data-delnode],[data-delord],[data-st],[data-tog],[data-icon],[data-pen],[data-out],[data-more],[data-logout],[data-mods],[data-creds],[data-exinfo],[data-editid],[data-place],[data-check]');
+  var t=e.target.closest('[data-back],[data-t],[data-open],[data-delnode],[data-delord],[data-st],[data-tog],[data-icon],[data-pen],[data-out],[data-more],[data-logout],[data-mods],[data-creds],[data-exinfo],[data-editid],[data-place],[data-check],[data-apv]');
   var mn=document.getElementById('menu');if(!t||!t.dataset.more)mn.classList.remove('on');if(!t)return;
   var d=t.dataset;
   if(held){held=false;return}
   if(d.icon){openIcon(d.icon);return}
+  else if(d.apv){if(!isAdmin)return;var ao=S.orders.find(function(o){return o.id===d.apv});if(!ao)return;if(!hasAppr){toast('Run the roles setup in Supabase first, then approve.');return}ao.approved=!ao.approved;save();toast(ao.approved?'Approved. Users can now pick this service.':'Hidden from users.',ao.approved)}
   else if(d.exinfo){exOpen=!exOpen}
   else if(d.editid){if(!isViewer)editId(d.editid);return}
   else if(d.place){if(isAdmin)placeOrder(d.place);return}
@@ -576,13 +611,13 @@ document.addEventListener('click',function(e){
   else if(d.pen){if(!isViewer)editing=!editing}
   else if(d.more){mn.classList.toggle('on');return}
   else if(d.logout){askLogout();return}
-  else if(d.mods){openMods();return}
+  else if(d.mods){openMembers();return}
   else if(d.creds){if(!isViewer)openCreds();return}
   else if(d.out){sb.auth.signOut().then(function(){location.reload()});return}
   else if(d.back){path.pop();exOpen=false}
   else if(d.tog){openG[d.tog]=!openG[d.tog]}
   else if(d.t){tab=d.t}
-  else if(d.delnode){askDel('section and everything inside it',function(){delNode(d.delnode)});return}
+  else if(d.delnode){if(!isAdmin)return;askDel('section and everything inside it',function(){delNode(d.delnode)});return}
   else if(d.open){var on=node(d.open);if(on&&depth(on)<=1)path.push(d.open)}
   else if(d.delord){askDel('order',function(){S.orders=S.orders.filter(function(o){return o.id!==d.delord});save()});return}
   else if(d.st){var o2=S.orders.find(function(o){return o.id===d.o});o2.status=d.st;save()}
@@ -600,76 +635,186 @@ setInterval(refresh,20000);
 setInterval(function(){if(otApi&&user&&scr==='orders'&&!document.hidden&&document.getElementById('veil').style.display!=='flex')otApi.reload()},20000);
 /* ---------- Orders Tracker screen ---------- */
 var otApi=null,VKEY='orders-tracker-videos-v1',vLocal=false,vSnap={};
+function canPanels(){return role==='owner'||role==='mod'}
+function canVideos(){return role==='owner'||role==='mod'||role==='user'}
 function vRead(){try{var r=JSON.parse(localStorage.getItem(VKEY)||'[]');return Array.isArray(r)?r:[]}catch(e){return []}}
-function vWrite(l){try{localStorage.setItem(VKEY,JSON.stringify(l))}catch(e){}}
-function vNote(){document.getElementById('otnote').style.display=(vLocal&&!isViewer)?'block':'none'}
+function vClean(o){var c={};Object.keys(o).forEach(function(k){if(k.charAt(0)!=='_')c[k]=o[k]});return c}
+function vWrite(l){try{localStorage.setItem(VKEY,JSON.stringify(l.map(vClean)))}catch(e){}}
+function vNote(){document.getElementById('otnote').style.display=(vLocal&&canVideos())?'block':'none'}
 var vStore={
   load:async function(){
-    var r=await sb.from('videos').select('id,data,created_at').order('created_at',{ascending:true});
-    if(r.error){if(/videos|relation|schema cache|does not exist|not find/i.test(r.error.message||'')){vLocal=true;vNote();return vRead()}throw r.error}
+    var r=await sb.from('videos').select('*').order('created_at',{ascending:true});
+    if(r.error){if(/relation|schema cache|could not find the table/i.test(r.error.message||'')){vLocal=true;vNote();return vRead()}throw r.error}
     vLocal=false;vNote();
-    var list=r.data.map(function(x){var o=Object.assign({},x.data||{});o.id=x.id;return o});
-    vSnap={};list.forEach(function(o){vSnap[o.id]=JSON.stringify(o)});
-    if(!list.length&&!isViewer){var loc=vRead();if(loc.length){await vStore.save(loc);vWrite([]);return loc}}
+    var list=r.data.map(function(x){var o=Object.assign({},x.data||{});o.id=x.id;if(x.owner)o._by=x.owner;return o});
+    vSnap={};list.forEach(function(o){vSnap[o.id]=JSON.stringify(vClean(o))});
+    if(!list.length&&canVideos()){var loc=vRead();if(loc.length){loc.forEach(function(o){o._by=user.id});await vStore.save(loc);vWrite([]);return loc}}
     return list;
   },
   save:async function(list){
     if(vLocal||!sb||!user){vWrite(list);return}
     var up=[],now={},r;
-    list.forEach(function(o){var j=JSON.stringify(o);now[o.id]=j;if(vSnap[o.id]!==j)up.push({id:o.id,data:o})});
+    list.forEach(function(o){var c=vClean(o),j=JSON.stringify(c);now[o.id]=j;if(vSnap[o.id]!==j)up.push({id:o.id,data:c})});
     var del=Object.keys(vSnap).filter(function(id){return !now[id]});
     if(del.length){r=await sb.from('videos').delete().in('id',del);if(r.error)throw r.error}
     if(up.length){r=await sb.from('videos').upsert(up);if(r.error)throw r.error}
     vSnap=now;
   }
 };
+function short(e){return String(e||'').split('@')[0]||'someone'}
+function personName(id){if(user&&id===user.id)return 'Me';var m=MEM.find(function(x){return x.user_id===id});return m?short(m.email):'Removed'}
+function peopleList(){
+  var l=[{id:null,label:'Everyone'},{id:user.id,label:'Me'}],seen={};seen[user.id]=1;
+  MEM.forEach(function(m){if(m.role==='mod'||m.role==='user'){seen[m.user_id]=1;l.push({id:m.user_id,label:short(m.email)})}});
+  ((otApi&&otApi.orders)||[]).forEach(function(o){if(o._by&&!seen[o._by]){seen[o._by]=1;l.push({id:o._by,label:personName(o._by)})}});
+  return l;
+}
+function planLabel(p){
+  if(canPanels()&&p.ref){var o=S.orders.find(function(x){return x.id===p.ref});if(o){var st=node(o.node);if(st)return st.title}}
+  return canPanels()?(p.site||p.name||''):(p.name||'');
+}
 function mountOrders(){
   if(otApi)otApi.destroy();
   otApi=OrderTracker.mount(document.getElementById('otroot'),{
-    monthlyTarget:10,labels:{order:'video',orders:'videos'},readOnly:isViewer,store:vStore,
+    monthlyTarget:10,labels:{order:'video',orders:'videos'},readOnly:!canVideos(),store:vStore,me:user&&user.id,
     linkPlaceholder:'https://www.instagram.com/p/........../',
+    people:function(){return isAdmin&&user?peopleList():[]},
+    byLabel:function(o){return isAdmin&&o._by&&o._by!==user.id?'by '+personName(o._by):''},
+    planLabel:planLabel,
     confirm:function(what,go){askDel(what,go)},
-    onPick:pickService});
+    onPick:function(o,s,done){pickService(o,s,done)},
+    onLogged:logWizard});
 }
-var STAT_NAME={views:'Views',likes:'Likes',shares:'Shares',saves:'Saves',reposts:'Reposts',comments:'Comments'};
+var STAT_NAME={views:'Views',likes:'Likes',shares:'Shares',saves:'Saves',reposts:'Reposts',comments:'Comments'},STAT_ORDER=['views','likes','shares','saves','reposts','comments'];
+var PT=[['working','Working'],['partial','Partial'],['failed','Failed'],['processing','Testing']];
 function ppk(p){var v=parseFloat(String(p==null?'':p).replace(/[^0-9.]/g,''));return isFinite(v)?v:0}
-function money(v){return '$'+(Math.round(v*100)/100).toFixed(2)}
-function pickService(v,stat,done){
-  var nm=STAT_NAME[stat]||stat,sec=S.nodes.find(function(n){return n.parent===null&&n.title.trim().toLowerCase()===nm.toLowerCase()});
-  var sites=sec?kids(sec.id):[],ids=sites.map(function(x){return x.id});
-  var all=S.orders.filter(function(o){return ids.indexOf(o.node)>=0});
-  var plan=(v.plan||{})[stat]||null,sel=plan&&plan.ref&&all.some(function(o){return o.id===plan.ref})?plan.ref:null;
-  var selO=sel&&all.find(function(o){return o.id===sel});
-  var ptab=selO?selO.status:'working',had=!!((v.goals||{})[stat]);
-  var PT=[['working','Working'],['partial','Partial'],['failed','Failed'],['processing','Testing']];
-  function list(){var g=all.filter(function(o){return o.status===ptab});
-    if(!sec)return '<div class="pk-none">There’s no “'+esc(nm)+'” section on your Panels screen yet, so there are no services to pick. You can still set a goal below.</div>';
+function usd2(v){return '$'+(Math.round(v*100)/100).toFixed(2)}
+function qnum(v){return Math.round(parseFloat(String(v).replace(/[^0-9.]/g,''))||0)}
+async function pickService(v,stat,done,step){
+  var nm=STAT_NAME[stat]||stat,had=!!((v.goals||{})[stat]),plan=(v.plan||{})[stat]||null;
+  var full=canPanels(),items=[],ptab='working',sel=plan&&plan.ref?plan.ref:null,note='';
+  var head=(step?'<div class="pk-step">Step '+step.i+' of '+step.n+'</div>':'')+'<h3>'+esc(nm)+' for '+(v.title?esc(v.title):'this video')+'</h3>';
+  if(full){
+    var sec=S.nodes.find(function(n){return n.parent===null&&n.title.trim().toLowerCase()===nm.toLowerCase()});
+    var ids=sec?kids(sec.id).map(function(x){return x.id}):[];
+    items=S.orders.filter(function(o){return ids.indexOf(o.node)>=0}).map(function(o){var st=node(o.node);return {id:o.id,name:o.title,price:ppk(o.price),site:st?st.title:'',status:o.status,ok:!!o.approved}});
+    if(!sec)note='There’s no “'+esc(nm)+'” section on your Panels screen yet, so there are no services to pick. You can still set a goal below.';
+  }else{
+    openSheet(head+'<div class="pk-none">Loading services...</div>');
+    var r=await sb.rpc('service_catalog');
+    if(r.error)note='Services aren’t ready yet. Check back soon.';
+    else items=(r.data||[]).filter(function(x){return x.stat===nm.toLowerCase()}).map(function(x){return {id:String(x.id),name:x.name,price:ppk(x.price)}});
+    if(!note&&!items.length)note='No '+esc(nm.toLowerCase())+' services are available yet.';
+  }
+  if(sel&&!items.some(function(i){return i.id===sel}))sel=null;
+  if(full&&sel)ptab=items.find(function(i){return i.id===sel}).status;
+  function item(){return sel?items.find(function(i){return i.id===sel}):null}
+  function list(){
+    if(note)return '<div class="pk-none">'+note+'</div>';
+    var g=full?items.filter(function(o){return o.status===ptab}):items;
     if(!g.length)return '<div class="pk-none">No '+esc(PT.filter(function(t){return t[0]===ptab})[0][1].toLowerCase())+' '+esc(nm.toLowerCase())+' services yet.</div>';
-    return g.map(function(o){var st=node(o.node);return '<button class="pk-row'+(o.id===sel?' on':'')+'" data-pk="'+o.id+'"><span style="min-width:0"><b>'+esc(o.title)+'</b><small>'+esc(st?st.title:'')+'</small></span><span class="pp">'+money(ppk(o.price))+' / 1K</span></button>'}).join('')}
-  function cost(){var q=parseFloat(String(document.getElementById('pkq').value).replace(/[^0-9.]/g,''))||0,o=sel&&all.find(function(x){return x.id===sel});
-    document.getElementById('pkc').innerHTML='<span>'+(o?'Cost at '+money(ppk(o.price))+' per 1,000':'Pick a service to see the cost')+'</span><b>'+(o?money(ppk(o.price)*q/1000):'')+'</b>'}
-  function paint(){document.getElementById('pkt').innerHTML=PT.map(function(t){return '<button class="t-'+t[0]+(ptab===t[0]?' on':'')+'" data-pt="'+t[0]+'">'+t[1]+'</button>'}).join('');document.getElementById('pkl').innerHTML=list();cost()}
-  openSheet('<h3>'+esc(nm)+' for '+(v.title?esc(v.title):'this video')+'</h3><div class="pinfo">Pick a service from your Panels list, then set how many you want.</div><div class="pk-tabs" id="pkt"></div><div class="pk-list" id="pkl"></div><input type="text" id="pkq" inputmode="numeric" placeholder="How many '+esc(nm.toLowerCase())+'?" value="'+(had?(v.goals[stat]):'')+'" autocomplete="off"><div class="pk-cost" id="pkc"></div><button class="btn" id="ok">Save</button>'+(had?'<button class="btn alt" id="rm" style="color:var(--bad)">Remove '+esc(nm.toLowerCase())+'</button>':'')+'<button class="btn alt" id="x">Cancel</button>');
+    return g.map(function(o){return '<button class="pk-row'+(o.id===sel?' on':'')+'" data-pk="'+esc(o.id)+'"><span style="min-width:0"><b>'+esc(o.name)+'</b>'+(full?'<small>'+esc(o.site)+(o.ok?' · ✓ Approved':'')+'</small>':'')+'</span><span class="pp">'+usd2(o.price)+' / 1K</span></button>'}).join('');
+  }
+  function cost(){var q=qnum(document.getElementById('pkq').value),o=item();
+    document.getElementById('pkc').innerHTML='<span>'+(o?'Cost at '+usd2(o.price)+' per 1,000':'Pick a service to see the cost')+'</span><b>'+(o?usd2(o.price*q/1000):'')+'</b>'}
+  function paint(){var t=document.getElementById('pkt');if(t)t.innerHTML=PT.map(function(x){return '<button class="t-'+x[0]+(ptab===x[0]?' on':'')+'" data-pt="'+x[0]+'">'+x[1]+'</button>'}).join('');document.getElementById('pkl').innerHTML=list();cost()}
+  var saveTxt=step?(step.i<step.n?'Save & next':'Save & finish'):'Save';
+  openSheet(head+'<div class="pinfo">'+(full?'Pick a service from your Panels list, then set how many you want.':'Pick a service, then set how many you want.')+'</div>'+(full?'<div class="pk-tabs" id="pkt"></div>':'')+'<div class="pk-list" id="pkl"></div><input type="text" id="pkq" inputmode="numeric" placeholder="How many '+esc(nm.toLowerCase())+'?" value="'+(had?esc(v.goals[stat]):'')+'" autocomplete="off"><div class="pk-cost" id="pkc"></div><button class="btn" id="ok">'+saveTxt+'</button>'+(step?'<button class="btn alt" id="sk">Skip '+esc(nm.toLowerCase())+'</button>':(had?'<button class="btn alt" id="rm" style="color:var(--bad)">Remove '+esc(nm.toLowerCase())+'</button>':''))+'<button class="btn alt" id="x">'+(step?'Stop here':'Cancel')+'</button>');
   paint();
-  document.getElementById('pkt').onclick=function(e){var b=e.target.closest('[data-pt]');if(b){ptab=b.dataset.pt;paint()}};
+  if(full)document.getElementById('pkt').onclick=function(e){var b=e.target.closest('[data-pt]');if(b){ptab=b.dataset.pt;paint()}};
   document.getElementById('pkl').onclick=function(e){var b=e.target.closest('[data-pk]');if(!b)return;sel=sel===b.dataset.pk?null:b.dataset.pk;paint()};
   document.getElementById('pkq').oninput=cost;
   document.getElementById('ok').onclick=function(){
-    var q=Math.round(parseFloat(String(document.getElementById('pkq').value).replace(/[^0-9.]/g,''))||0);
+    var q=qnum(document.getElementById('pkq').value),o=item();
+    if(!full&&!o){toast('Pick a service first');return}
     if(q<=0){toast('Type how many '+nm.toLowerCase()+' you want');return}
-    var o=sel&&all.find(function(x){return x.id===sel}),st=o&&node(o.node);
-    closeSheet();done({qty:q,plan:o?{ref:o.id,site:st?st.title:'',svc:o.title,price:ppk(o.price),sid:o.svc||''}:null});
+    closeSheet();done({qty:q,plan:o?{ref:o.id,name:o.name,price:o.price}:null});
+    if(step)step.next();
   };
-  if(had)document.getElementById('rm').onclick=function(){askDel(nm.toLowerCase()+' goal from this video',function(){done(null)})};
+  if(step)document.getElementById('sk').onclick=function(){step.next()};
+  else if(had)document.getElementById('rm').onclick=function(){askDel(nm.toLowerCase()+' goal from this video',function(){done(null)})};
   document.getElementById('x').onclick=closeSheet;
 }
+function logWizard(v,setStat){
+  var on={};
+  openSheet('<h3>What does '+(v.title?esc(v.title):'this video')+' need?</h3><div class="pinfo">Pick the ones you want. You’ll choose a service for each one, starting with views.</div><div class="wzc" id="wzc"></div><button class="btn" id="ok">Next</button><button class="btn alt" id="x">Skip for now</button>');
+  function paint(){document.getElementById('wzc').innerHTML=STAT_ORDER.map(function(s){return '<button class="wz'+(on[s]?' on':'')+'" data-wz="'+s+'">'+(on[s]?'✓ ':'')+STAT_NAME[s]+'</button>'}).join('')}
+  paint();
+  document.getElementById('wzc').onclick=function(e){var b=e.target.closest('[data-wz]');if(!b)return;on[b.dataset.wz]=!on[b.dataset.wz];paint()};
+  document.getElementById('x').onclick=closeSheet;
+  document.getElementById('ok').onclick=function(){
+    var l=STAT_ORDER.filter(function(s){return on[s]});
+    if(!l.length){toast('Pick at least one, or tap Skip for now');return}
+    (function run(i){
+      if(i>=l.length){closeSheet();toast('All set',true);return}
+      pickService(v,l[i],function(res){setStat(l[i],res)},{i:i+1,n:l.length,next:function(){run(i+1)}});
+    })(0);
+  };
+}
+
+/* ---------- Members (owner only) ---------- */
+var ROLES=[['mod','Mods','Mod','Adds and tests services on the Panels screen.'],['user','Users','User','Logs their own videos and picks approved services.'],['viewer','Viewers','Viewer','Only looks at the Orders screen.']],addRole='user';
+function roleName(r){var x=ROLES.filter(function(y){return y[0]===r})[0];return x?x[2]:'Viewer'}
+async function loadMem(){if(!isAdmin)return null;var r=await sb.from('members').select('*').order('added_at',{ascending:true});if(!r.error)MEM=r.data||[];return r}
+function setupHint(msg){
+  if(/no account/i.test(msg))return 'No account with that email yet. Create it in <a href="https://supabase.com/dashboard/project/ttnvbmqtyxbqfyxadjdf/auth/users" target="_blank" rel="noopener">Supabase → Users</a> first, then add them here.';
+  if(/check constraint|role|function/i.test(msg))return 'Run the roles setup in the <a href="https://supabase.com/dashboard/project/ttnvbmqtyxbqfyxadjdf/sql/new" target="_blank" rel="noopener">Supabase SQL Editor</a> first.';
+  return esc(msg);
+}
+async function openMembers(){
+  if(!isAdmin)return;
+  document.getElementById('menu').classList.remove('on');
+  document.getElementById('mpage').classList.add('on');
+  document.getElementById('mbody').innerHTML='<div class="empty" style="margin-top:60px">Loading...</div>';
+  var r=await loadMem();
+  if(r&&r.error){document.getElementById('mbody').innerHTML='<div class="empty" style="margin-top:60px">Could not load members.<br>'+esc(r.error.message)+'</div>';return}
+  drawMembers();
+}
+function drawMembers(){
+  var h='<div class="madd"><div class="mh2">Add someone</div><input type="email" id="maddE" placeholder="Their email address" autocomplete="off" autocapitalize="off"><div class="rseg" id="rseg">'+ROLES.map(function(r){return '<button data-ar="'+r[0]+'" class="'+(addRole===r[0]?'on':'')+'">'+r[2]+'</button>'}).join('')+'</div><button class="btn" id="maddGo">Add as '+roleName(addRole)+'</button><div class="mmsg" id="mmsg"></div></div>';
+  h+='<div class="msec s-owner"><div class="msh">Owner — 1</div><div class="mrow2"><span class="mav">\u{1F451}</span><span class="me">'+esc(user.email||'You')+'</span><span class="rtag">You</span></div></div>';
+  ROLES.forEach(function(r){
+    var l=MEM.filter(function(m){return (ROLES.some(function(y){return y[0]===m.role})?m.role:'viewer')===r[0]});
+    h+='<div class="msec s-'+r[0]+'"><div class="msh">'+r[1]+' — '+l.length+'</div>'+(l.length?l.map(function(m){return '<button class="mrow2" data-mem="'+esc(m.user_id)+'"><span class="mav">'+esc(short(m.email).charAt(0).toUpperCase())+'</span><span class="me">'+esc(m.email||m.user_id)+'</span><span class="chev">›</span></button>'}).join(''):'<div class="mnone">No one yet</div>')+'</div>';
+  });
+  document.getElementById('mbody').innerHTML=h;
+}
+function openMember(id){
+  var m=MEM.find(function(x){return x.user_id===id});if(!m)return;
+  openSheet('<h3 style="overflow-wrap:anywhere">'+esc(m.email||m.user_id)+'</h3><div class="pinfo">Tap a role to switch them.</div>'+ROLES.map(function(r){var on=m.role===r[0];return '<button class="rpick'+(on?' on':'')+'" data-rp="'+r[0]+'"><b>'+(on?'✓ ':'')+r[2]+'</b><small>'+r[3]+'</small></button>'}).join('')+'<div class="perr" id="rperr"></div><button class="btn dangerbtn" id="rm">Remove from app</button><button class="btn alt" id="x">Close</button>');
+  document.getElementById('x').onclick=closeSheet;
+  document.getElementById('sheet').querySelectorAll('[data-rp]').forEach(function(b){b.onclick=async function(){
+    var nr=b.dataset.rp;if(nr===m.role){closeSheet();return}
+    var r=await sb.from('members').update({role:nr}).eq('user_id',id).select();
+    if(r.error||!r.data||!r.data.length){document.getElementById('rperr').innerHTML=setupHint(r.error?r.error.message:'Not changed. Try again.');return}
+    closeSheet();toast(short(m.email)+' is now a '+roleName(nr)+'.',true);await loadMem();drawMembers();if(otApi)otApi.reload();
+  }});
+  document.getElementById('rm').onclick=function(){
+    openSheet('<h3>Remove '+esc(short(m.email))+'?</h3><p style="color:var(--mute);margin:0 0 14px;overflow-wrap:anywhere">'+esc(m.email||'')+' will be logged out and locked out of the app. Their videos stay. This cannot be undone.</p><button class="btn dangerbtn" id="yes">Yes, remove</button><button class="btn alt" id="x">Cancel</button>');
+    document.getElementById('x').onclick=function(){openMember(id)};
+    document.getElementById('yes').onclick=async function(){var d=await sb.from('members').delete().eq('user_id',id).select();closeSheet();if(d.error||!d.data||!d.data.length){toast('Not removed: '+(d.error?d.error.message:'try again'));return}toast(short(m.email)+' was removed.',true);await loadMem();drawMembers()};
+  };
+}
+document.getElementById('mpage').addEventListener('click',async function(e){
+  var b=e.target.closest('[data-mclose],[data-ar],[data-mem],#maddGo');if(!b)return;var d=b.dataset;
+  if(d.mclose){document.getElementById('mpage').classList.remove('on');if(otApi)otApi.reload()}
+  else if(d.ar){addRole=d.ar;document.querySelectorAll('#rseg button').forEach(function(x){x.classList.toggle('on',x.dataset.ar===addRole)});document.getElementById('maddGo').textContent='Add as '+roleName(addRole)}
+  else if(d.mem){openMember(d.mem)}
+  else if(b.id==='maddGo'){
+    var em=document.getElementById('maddE').value.trim(),msg=document.getElementById('mmsg');msg.innerHTML='';
+    if(!/^\S+@\S+\.\S+$/.test(em)){msg.textContent='Type their email first.';return}
+    b.disabled=true;var r=await sb.rpc('add_member',{p_email:em,p_role:addRole});b.disabled=false;
+    if(r.error){msg.innerHTML=setupHint(r.error.message);return}
+    toast(short(em)+' added as a '+roleName(addRole)+'.',true);await loadMem();drawMembers();
+  }
+});
 
 /* ---------- swipe between the two screens ---------- */
 var scr='orders',sw=null,swUntil=0,scrY={orders:0,panels:0};
 function scrEl(n){return document.getElementById(n==='orders'?'oscreen':'pscreen')}
 function paintDots(){document.querySelectorAll('.dots button').forEach(function(b){b.classList.toggle('on',b.dataset.scr===scr)})}
 function setScreen(n,dir){
-  if(n===scr)return;
+  if(n===scr||(n==='panels'&&!canPanels()))return;
   var from=scrEl(scr),to=scrEl(n);scrY[scr]=window.scrollY;
   from.style.display='none';from.style.transform='';from.style.opacity='';
   scr=n;to.style.display='block';document.body.classList.toggle('ot-on',n==='orders');
@@ -678,9 +823,10 @@ function setScreen(n,dir){
   try{to.animate([{transform:'translateX('+(dir*36)+'%)',opacity:.3},{transform:'none',opacity:1}],{duration:260,easing:'cubic-bezier(.2,.8,.2,1)'})}catch(e){}
 }
 function canSwipe(t){
-  if(!user||editing||drag||dragging)return false;
+  if(!user||!canPanels()||editing||drag||dragging)return false;
+  if(document.getElementById('mpage').classList.contains('on'))return false;
   if(document.getElementById('veil').style.display==='flex'||document.getElementById('cpage').classList.contains('on')||document.getElementById('login').style.display==='flex')return false;
-  if(t.closest&&t.closest('#tabs,.ot-seg,input,textarea,select,.ot-pop,#menu'))return false;
+  if(t.closest&&t.closest('#tabs,.ot-seg,.ot-who,input,textarea,select,.ot-pop,#menu'))return false;
   if(scr==='orders'&&document.querySelector('#otroot .ot-egrid'))return false;
   return true;
 }
