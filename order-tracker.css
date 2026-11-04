@@ -1,0 +1,123 @@
+/* Order Tracker — styles. Everything is scoped under .ot so it can't clash with the host app. */
+.ot{
+  --ot-bg:#0B1A26; --ot-card:#2C3C48; --ot-track:#16222B; --ot-ink:#fff; --ot-soft:rgba(255,255,255,.75);
+  --ot-green:#1BE07F; --ot-yellow:#FFC400; --ot-red:#FF2D3D; --ot-blue:#4FA0FF;
+  --ot-display:"Bricolage Grotesque","Arial Black",system-ui,sans-serif;
+  --ot-font:"Geist",ui-sans-serif,system-ui,-apple-system,sans-serif;
+  color:var(--ot-ink);font-family:var(--ot-font);font-size:17px;line-height:1.4;
+  display:flex;flex-direction:column;gap:14px;max-width:640px;margin:0 auto;padding:16px max(16px,env(safe-area-inset-right,0px)) 80px max(16px,env(safe-area-inset-left,0px));
+}
+.ot *{box-sizing:border-box}
+.ot button,.ot input{font:inherit;color:inherit}
+.ot button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+
+/* top row: month switch + refresh */
+.ot-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.ot-seg{display:flex;gap:4px;padding:4px;border-radius:999px;background:rgba(255,255,255,.12)}
+.ot-seg button{border:0;background:none;border-radius:999px;padding:8px 16px;font-weight:800;color:rgba(255,255,255,.75)}
+.ot-seg button[aria-pressed="true"]{background:#fff;color:#0B1A3A}
+.ot-ref{display:flex;align-items:center;gap:7px;height:44px;border:0;border-radius:999px;background:var(--ot-green);color:#06210F;padding:0 16px;font-weight:800}
+.ot-ref svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.ot-ref.spin svg{animation:otSpin .9s linear infinite}
+@keyframes otSpin{to{transform:rotate(360deg)}}
+
+/* grand total + counter + color key */
+.ot-grand{display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center}
+.ot-grand .lb{font-weight:700;font-size:15px;color:var(--ot-soft)}
+.ot-grand b{font-family:var(--ot-display);font-weight:800;font-size:40px;letter-spacing:-.02em;color:var(--ot-green);font-variant-numeric:tabular-nums}
+.ot-grand small{font-weight:700;font-size:15px;color:var(--ot-soft)}
+.ot-key{display:flex;justify-content:center;flex-wrap:wrap;gap:6px 16px;font-weight:800;font-size:15px;color:rgba(255,255,255,.88)}
+
+/* order card */
+.ot-card{position:relative;border-radius:22px;padding:16px;background:var(--ot-card);box-shadow:0 8px 22px rgba(0,0,0,.22);display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.ot-hd{display:flex;align-items:flex-start;gap:10px}
+.ot-name{flex:1;min-width:0;font-weight:800;font-size:17.5px;line-height:1.25;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
+.ot-edbtn{flex:none;border:1.5px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);border-radius:999px;padding:6px 12px;font-weight:800;font-size:14px;white-space:nowrap}
+.ot-views{font-family:var(--ot-display);font-weight:800;font-size:30px;letter-spacing:-.02em;line-height:1.05;font-variant-numeric:tabular-nums}
+.ot-views .g{color:rgba(255,255,255,.55)}
+.ot-views small{font-family:var(--ot-font);font-size:16px;font-weight:700;color:var(--ot-soft);margin-left:6px}
+.ot-chk{display:inline-grid;place-items:center;width:26px;height:26px;margin-left:8px;border-radius:50%;background:var(--ot-green);color:#06210F;font:900 15px/1 var(--ot-font);vertical-align:middle}
+.ot-mid{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ot-thumb{display:block;width:96px;height:128px;border-radius:14px;background:rgba(255,255,255,.08) center/cover no-repeat;box-shadow:0 0 0 1px rgba(255,255,255,.14)}
+.ot-copy{border:0;border-radius:999px;background:rgba(79,160,255,.18);color:#BFDCFF;padding:10px 16px;font-weight:800}
+
+/* stat cards */
+.ot-stats{display:flex;flex-direction:column;gap:8px}
+.ot-stc{display:flex;align-items:center;gap:12px;border-radius:16px;padding:10px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
+.ot-stc .ic{flex:none;width:34px;display:grid;place-items:center;color:#fff}
+.ot-chip svg{display:block}
+.ot-stc .bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.ot-stc .n{display:flex;align-items:baseline;gap:8px}
+.ot-stc .n b{font-weight:800;font-size:20px;font-variant-numeric:tabular-nums}
+.ot-stc .n small{font-weight:700;font-size:13.5px;color:rgba(255,255,255,.6)}
+
+/* progress bar + % + 🤖 button. States: idle (blue, empty) → mv (green, moving) → y (stalling) → r (needs review) → g (complete) */
+.ot-bar-r{display:flex;align-items:center;gap:8px}
+.ot-bar{position:relative;flex:1;height:10px;border-radius:5px;background:var(--ot-track);overflow:hidden}
+.ot-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--ot-green);transition:width 1.2s cubic-bezier(.2,.8,.2,1)}
+.ot-bar.s-idle i{opacity:0}
+.ot-bar.s-mv i{background:linear-gradient(90deg,#0FBF62,#2BF08F);box-shadow:0 0 10px 1px rgba(27,224,127,.75)}
+.ot-bar.s-y i{background:var(--ot-yellow);animation:otBreath 3.2s ease-in-out infinite}
+.ot-bar.s-r i{background:var(--ot-red);animation:otPulse 1.3s ease-in-out infinite}
+.ot-pct{flex:none;min-width:46px;text-align:right;font-weight:800;font-size:19px;font-variant-numeric:tabular-nums}
+.ot-pct.s-mv,.ot-pct.s-g{color:#2BF08F}.ot-pct.s-y{color:#FFD000}.ot-pct.s-r{color:#FF5A66}.ot-pct.s-idle{color:rgba(255,255,255,.7)}
+.ot-stc.s-y .n b{color:#FFD000}.ot-stc.s-r .n b{color:#FF5A66}
+.ot-bot{flex:none;width:40px;height:30px;padding:0;border-radius:999px;border:1.5px solid rgba(79,160,255,.55);background:rgba(79,160,255,.16);font-size:16px;display:grid;place-items:center}
+.ot-bot.s-mv,.ot-bot.s-g{background:rgba(27,224,127,.2);border-color:var(--ot-green)}
+.ot-bot.s-y{background:rgba(255,196,0,.2);border-color:var(--ot-yellow);animation:otSwB 3.2s ease-in-out infinite}
+.ot-bot.s-r{background:rgba(255,45,61,.22);border-color:var(--ot-red);animation:otSwP 1.3s ease-in-out infinite}
+@keyframes otBreath{50%{box-shadow:0 0 14px 2px rgba(255,196,0,.9)}}
+@keyframes otPulse{50%{box-shadow:0 0 16px 3px rgba(255,45,61,1)}}
+@keyframes otSwB{50%{box-shadow:0 0 16px 4px rgba(255,196,0,.85)}}
+@keyframes otSwP{50%{box-shadow:0 0 22px 7px rgba(255,45,61,.95)}}
+@media (prefers-reduced-motion:reduce){.ot-bar i,.ot-bot{animation:none!important}}
+
+/* done chips (stats that finished leave the card and show here) */
+.ot-done{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-weight:800;font-size:14px;color:rgba(255,255,255,.65)}
+.ot-chip{display:flex;align-items:center;gap:4px;height:30px;padding:0 10px;border-radius:999px;font-weight:900;font-size:14px}
+.mk-g{color:#3BE08F;background:rgba(27,224,127,.14);border:1.5px solid rgba(27,224,127,.6)}
+.mk-y{color:#FFD000;background:rgba(255,196,0,.13);border:1.5px solid rgba(255,196,0,.65)}
+.mk-r{color:#FF6A76;background:rgba(255,45,61,.14);border:1.5px solid rgba(255,45,61,.7)}
+.ot-usd{align-self:flex-end;font-family:var(--ot-display);font-weight:800;font-size:20px;color:var(--ot-green);font-variant-numeric:tabular-nums}
+
+/* edit mode inputs */
+.ot-in{width:100%;border:1.5px solid rgba(255,255,255,.2);background:rgba(0,0,0,.28);border-radius:12px;padding:9px 12px;outline:0;font-weight:700}
+.ot-in:focus{border-color:#fff}
+.ot-egrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ot-egrid label{display:flex;flex-direction:column;gap:4px;font-size:13.5px;font-weight:700;color:var(--ot-soft)}
+.ot-btn{border:0;border-radius:14px;padding:12px 16px;font-weight:800;background:var(--ot-green);color:#06210F}
+.ot-btn.ghost{background:rgba(255,255,255,.1);color:#fff}
+.ot-btn.danger{background:transparent;border:1.5px solid rgba(255,106,120,.5);color:#FF6A78}
+.ot-row{display:flex;gap:8px;flex-wrap:wrap}
+
+/* log box */
+.ot-log{border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;border:2px dashed rgba(255,255,255,.18);background:rgba(255,255,255,.04)}
+.ot-log-h{text-align:center;font-weight:700;color:rgba(255,255,255,.78)}
+.ot-log-h b{color:#fff;font-weight:900}
+.ot-logbtn{display:flex;align-items:center;justify-content:center;gap:10px}
+.ot-logbtn i{font-style:normal;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.95);color:#0FA45E;font:900 20px/1 var(--ot-font)}
+
+/* completed + archive rows */
+.ot-sec{display:flex;flex-direction:column;gap:8px}
+.ot-sec-h{font-weight:800;font-size:17px}
+.ot-arow{all:unset;cursor:pointer;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);font-weight:800}
+.ot-arow span{font-weight:700;color:var(--ot-soft);font-size:15px}
+
+/* pop-up (mark complete) */
+.ot-pop{position:fixed;inset:0;z-index:50;display:grid;place-items:end center;background:rgba(0,0,0,.45);padding:16px}
+.ot-pop>div{width:100%;max-width:420px;border-radius:22px;padding:18px;background:#16293A;display:flex;flex-direction:column;gap:12px}
+.ot-pop p{margin:0;color:rgba(255,255,255,.8)}
+.ot-toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;background:#fff;color:#111;border-radius:16px;padding:12px 18px;font-weight:700;max-width:calc(100% - 32px)}
+.ot-empty{text-align:center;color:var(--ot-soft);padding:30px 10px}
+
+/* Panel Tracker additions */
+.ot-num{display:block;font-size:12.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:2px}
+.ot-plan{display:block;font-style:normal;font-weight:700;font-size:12.5px;color:#9fd8ff;margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
+.ot-views .ot-plan{display:inline-block;margin-left:10px;vertical-align:middle;font-family:var(--ot-font);max-width:none}
+.ot-views[data-ot-pick],.ot-stc[data-ot-pick]{cursor:pointer}
+.ot-adds{display:flex;flex-wrap:wrap;gap:8px}
+.ot-add{display:inline-flex;align-items:center;gap:5px;border:1.5px dashed rgba(255,255,255,.28);background:rgba(255,255,255,.04);border-radius:999px;padding:7px 12px;font-weight:800;font-size:14px;color:rgba(255,255,255,.85)}
+.ot-lbl{display:flex;flex-direction:column;gap:5px;font-weight:800;font-size:14px;color:rgba(255,255,255,.78)}
+.ot-in::placeholder{color:rgba(255,255,255,.38);font-weight:600}
+.ot-big{all:unset;cursor:pointer;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:12px;padding:48px 16px;border-radius:22px;border:2px dashed rgba(255,255,255,.18);text-align:center;font-weight:800;font-size:18px;color:rgba(255,255,255,.85)}
+.ot-big i{font-style:normal;display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:var(--ot-green);color:#06210F;font:900 38px/1 var(--ot-font);box-shadow:0 8px 26px rgba(27,224,127,.45)}

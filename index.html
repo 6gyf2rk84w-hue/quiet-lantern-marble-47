@@ -10,6 +10,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#0a0a12">
 <title>Panel Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Geist:wght@400;600;700;800&display=swap">
+<link rel="stylesheet" href="order-tracker.css">
 <style>
 :root{--bg:#0a0a12;--card:rgba(255,255,255,.05);--card2:rgba(255,255,255,.09);--line:rgba(255,255,255,.09);--ink:#f2f2f7;--mute:#8e8ea3;--a1:#8b5cf6;--a2:#22d3ee;--ok:#34d399;--bad:#fb7185;--wait:#fbbf24;--part:#f97316;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box}
@@ -142,21 +145,62 @@ html,body{overflow-x:hidden;max-width:100%}
 .perr{color:var(--bad);font-size:14px;margin-top:10px;min-height:18px}
 .btn:disabled{opacity:.55}
 .dragging{position:relative;z-index:6;background:#1d1d2c!important;box-shadow:0 14px 34px rgba(0,0,0,.55);border-color:var(--a1)!important}
+/* two screens: Orders Tracker + Panels Tracker */
+html,body{overscroll-behavior-x:none}
+body{touch-action:pan-y}
+body.ot-on{background:#0B1A26}
+body.ot-on::before{background:#0B1A26}
+.scr{will-change:auto}
+#oscreen{min-height:100vh}
+.ohead{max-width:640px;margin:0 auto;padding:16px 16px 0;text-align:center}
+.ohead h1{margin:0;font:800 30px/1.1 "Bricolage Grotesque","Arial Black",system-ui,sans-serif;letter-spacing:-.02em;color:#fff}
+.dots{display:flex;justify-content:center;gap:10px;padding:10px 0 2px}
+.dots button{width:26px;height:22px;border:0;background:none;padding:0;display:grid;place-items:center}
+.dots button::after{content:"";width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.28);transition:background .2s,transform .2s}
+.dots button.on::after{background:#fff;transform:scale(1.15)}
+#top .dots{padding:6px 0 0}
+#otnote{max-width:640px;margin:10px auto 0;padding:0 16px;display:none}
+#otnote div{border-radius:14px;padding:10px 14px;background:rgba(255,196,0,.12);border:1px solid rgba(255,196,0,.45);color:#FFD76A;font:600 14px/1.4 "Geist",system-ui,sans-serif}
+body.swiping,body.swiping *{-webkit-user-select:none!important;user-select:none!important}
+body.swiping .scr *{pointer-events:none!important}
+/* service picker */
+.pk-tabs{display:flex;gap:6px;overflow-x:auto;margin:0 0 12px;scrollbar-width:none}
+.pk-tabs::-webkit-scrollbar{display:none}
+.pk-tabs button{flex:none;padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--mute);font-size:14px;font-weight:600}
+.pk-tabs button.on{color:#fff;border-color:transparent;background:linear-gradient(135deg,var(--a1),var(--a2))}
+.pk-tabs button.t-working.on{background:linear-gradient(135deg,#059669,#34d399)}
+.pk-tabs button.t-partial.on{background:linear-gradient(135deg,#ea580c,#fb923c)}
+.pk-tabs button.t-failed.on{background:linear-gradient(135deg,#dc2626,#fb7185)}
+.pk-tabs button.t-processing.on{background:linear-gradient(135deg,#b45309,#f59e0b)}
+.pk-list{display:flex;flex-direction:column;gap:6px;max-height:36vh;overflow-y:auto;margin-bottom:12px}
+.pk-row{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;padding:11px 13px;border-radius:13px;border:1px solid var(--line);background:var(--card)}
+.pk-row b{display:block;font-size:15.5px;font-weight:600}
+.pk-row small{display:block;color:var(--mute);font-size:13px}
+.pk-row span.pp{flex:none;font-weight:700;color:var(--ok);font-size:15px}
+.pk-row.on{border-color:var(--a2);background:rgba(34,211,238,.12)}
+.pk-cost{display:flex;justify-content:space-between;align-items:baseline;margin:2px 0 8px;font-size:15px;color:var(--mute)}
+.pk-cost b{font-size:22px;color:var(--ok)}
+.pk-none{color:var(--mute);font-size:14.5px;padding:10px 2px 14px;line-height:1.45}
 </style>
 </head>
-<body>
+<body class="ot-on">
+<div id="oscreen" class="scr"><div class="ohead"><h1>Orders Tracker</h1><div class="dots"><button data-scr="orders" aria-label="Orders Tracker"></button><button data-scr="panels" aria-label="Panels Tracker"></button></div></div><div id="otnote"><div>Orders are saved on this phone only for now. One quick setup step in Supabase will sync them for everyone.</div></div><div id="otroot"></div></div>
+<div id="pscreen" class="scr" style="display:none">
 <div id="top">
   <div class="hrow"><button id="back" data-back="1" aria-label="Back">&#8592;</button><div class="tw"><h1 id="ttl">Panel Tracker</h1><div id="crumb"></div></div><button id="pen" data-pen="1" aria-label="Edit mode">&#9998;</button><button id="more" data-more="1" aria-label="More">&#8943;</button><div id="menu"><button class="mi" id="credsBtn" data-creds="1">Login credentials</button><button class="mi" id="modsBtn" data-mods="1" style="display:none">Mods</button><button data-logout="1">Log out</button></div></div>
+  <div class="dots"><button data-scr="orders" aria-label="Orders Tracker"></button><button data-scr="panels" aria-label="Panels Tracker"></button></div>
   <div id="tabs"></div>
 </div>
 <div id="main"><div class="empty">Loading...</div></div>
 <button id="fab" aria-label="Add">+</button>
+</div>
 <div id="cpage"><div class="chead"><button class="cb" data-cclose="1" aria-label="Back">&#8592;</button><h2>Logins</h2><button class="btn" id="cadd" data-cadd="1" style="display:none;width:auto;margin:0;padding:10px 14px;font-size:15px">+ Add</button></div><div id="clist"></div></div>
 <div id="veil"><div id="sheet"></div></div>
 <div id="login"><div class="lbox"><h2 class="lt">Panel Tracker</h2><p class="lp">Sign in to continue</p><input type="email" id="lem" placeholder="Email" autocomplete="username"><input type="password" id="lpw" placeholder="Password" autocomplete="current-password"><button class="btn" id="lgo">Sign in</button><button class="fl" id="lfg">Forgot password?</button><div id="lmsg"></div></div></div>
 <div id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="icons.js"></script>
+<script src="order-tracker.js"></script>
 <script>
 var KEY='order-tracker-v1',S={nodes:[],orders:[]},tab='main',path=[],openG={},sb=null,user=null,isAdmin=false,snap={n:{},o:{}},q=Promise.resolve(),hasPos=false,drag=null,dragging=false,gripOrders=false,isViewer=false,exOpen=false,hasOid=false,hasSvc=false;
 var SB_URL='https://ttnvbmqtyxbqfyxadjdf.supabase.co',SB_KEY='sb_publishable_1gfteu6dl--6yOo8FKMFow_QmAO7FGE';
@@ -214,9 +258,9 @@ async function load(){
 function byPos(a,b){return (a.pos==null?1e12:a.pos)-(b.pos==null?1e12:b.pos)}
 function sortAll(){S.nodes.sort(byPos);S.orders.sort(byPos)}
 async function memberRow(){if(!user)return null;var r=await sb.from('members').select('*').eq('user_id',user.id);if(r.error)return {role:'mod'};return (r.data&&r.data[0])||null}
-async function stillMember(){var m=await memberRow();if(!m)return false;var v=m.role==='viewer';if(v!==isViewer){isViewer=v;if(v)editing=false;applyRole();render()}return true}
+async function stillMember(){var m=await memberRow();if(!m)return false;var v=m.role==='viewer';if(v!==isViewer){isViewer=v;if(v)editing=false;applyRole();render();mountOrders()}return true}
 function applyRole(){document.getElementById('pen').style.display=isViewer?'none':'flex';document.getElementById('credsBtn').style.display=isViewer?'none':'block'}
-function kick(msg){document.getElementById('cpage').classList.remove('on');isViewer=false;applyRole();var u=user;user=null;isAdmin=false;S={nodes:[],orders:[]};path=[];editing=false;closeSheet();document.getElementById('main').innerHTML='';sb.auth.signOut().catch(function(){});document.getElementById('login').style.display='flex';document.getElementById('lmsg').textContent=msg||''}
+function kick(msg){document.getElementById('cpage').classList.remove('on');isViewer=false;applyRole();var u=user;user=null;isAdmin=false;S={nodes:[],orders:[]};path=[];editing=false;closeSheet();document.getElementById('main').innerHTML='';if(otApi){otApi.destroy();otApi=null}sb.auth.signOut().catch(function(){});document.getElementById('login').style.display='flex';document.getElementById('lmsg').textContent=msg||''}
 function refresh(){if(!user||dragging||document.hidden||document.getElementById('veil').style.display==='flex')return;q=q.then(async function(){if(!isAdmin&&!(await stillMember())){kick('Your access to this app has been removed.');return}await load();render()}).catch(function(){})}
 async function start(u){
   user=u;document.getElementById('login').style.display='none';
@@ -226,6 +270,7 @@ async function start(u){
   isViewer=false;
   if(!isAdmin&&!(await stillMember()))return kick('Your access to this app has been removed.');
   applyRole();
+  mountOrders();
   await load();
   if(!S.nodes.length&&isAdmin){
     var old=localOld();
@@ -241,7 +286,7 @@ async function boot(){
     sb.auth.onAuthStateChange(function(ev){if(ev==='PASSWORD_RECOVERY')setTimeout(newPassword,300)});
     var r=await sb.auth.getSession();
     if(r.data&&r.data.session)await start(r.data.session.user);else document.getElementById('login').style.display='flex';
-  }catch(e){document.getElementById('main').innerHTML='<div class="empty"><b>⚠️</b>Could not connect.<br>Check your internet and reopen the app.</div>';toast(String((e&&e.message)||e))}
+  }catch(e){document.getElementById('main').innerHTML='<div class="empty"><b>\u26a0\ufe0f</b>Could not connect.<br>Check your internet and reopen the app.</div>';toast(String((e&&e.message)||e))}
 }
 function uid(){return Math.random().toString(36).slice(2,10)}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
@@ -253,8 +298,8 @@ var editing=false;
 var TABS=[['main','Main'],['processing','Testing'],['working','Working'],['partial','Partial'],['failed','Failed']];
 var STS=[['processing','Testing','var(--wait)'],['working','Working','var(--ok)'],['partial','Partial','var(--part)'],['failed','Failed','var(--bad)']];
 function ordHtml(o){
-  return '<div class="ord" data-oid="'+o.id+'" data-grp="'+o.status+'"><div class="top">'+(gripOrders?'<span class="grip" aria-label="Drag to reorder">⋮⋮</span>':'')+'<div style="flex:1;min-width:0">'+(o.oid?'<span class="oid">ID: '+esc(o.oid)+'</span>':'')+(o.svc?'<span class="svc">Service '+esc(o.svc)+'</span>':'')+'<div class="t">'+esc(o.title)+'</div><div class="price">'+esc(o.price)+' per 1,000</div>'+(editing&&!isViewer?'<button class="idbtn" data-editid="'+o.id+'">✎ Edit details</button>':'')+'</div>'
-  +'<div>'+(editing?'<button class="xdel" data-delord="'+o.id+'" aria-label="Delete">✕</button>':'')+'</div></div>'
+  return '<div class="ord" data-oid="'+o.id+'" data-grp="'+o.status+'"><div class="top">'+(gripOrders?'<span class="grip" aria-label="Drag to reorder">\u22ee\u22ee</span>':'')+'<div style="flex:1;min-width:0">'+(o.oid?'<span class="oid">ID: '+esc(o.oid)+'</span>':'')+(o.svc?'<span class="svc">Service '+esc(o.svc)+'</span>':'')+'<div class="t">'+esc(o.title)+'</div><div class="price">'+esc(o.price)+' per 1,000</div>'+(editing&&!isViewer?'<button class="idbtn" data-editid="'+o.id+'">\u270e Edit details</button>':'')+'</div>'
+  +'<div>'+(editing?'<button class="xdel" data-delord="'+o.id+'" aria-label="Delete">\u2715</button>':'')+'</div></div>'
   +ownerActs(o)
   +'<div class="seg">'+STS.map(function(s){return '<button class="'+s[0]+(o.status===s[0]?' on':'')+'"'+(isViewer?' disabled':' data-st="'+s[0]+'" data-o="'+o.id+'"')+'>'+s[1]+'</button>'}).join('')+'</div></div>';
 }
@@ -262,8 +307,8 @@ function render(){
   var c=cur();
   gripOrders=editing&&tab==='main'&&!!c&&!!node(c)&&node(c).parent!==null;
   document.getElementById('back').style.display=(tab==='main'&&c)?'flex':'none';
-  document.getElementById('ttl').textContent=tab==='main'?(c?node(c).title:'Panel Tracker'):TABS.filter(function(t){return t[0]===tab})[0][1];
-  document.getElementById('crumb').textContent=(tab==='main'&&c)?chain(c).map(function(n){return n.title}).join('  ›  '):'';
+  document.getElementById('ttl').textContent=tab==='main'?(c?node(c).title:'Panels Tracker'):TABS.filter(function(t){return t[0]===tab})[0][1];
+  document.getElementById('crumb').textContent=(tab==='main'&&c)?chain(c).map(function(n){return n.title}).join('  \u203a  '):'';
   document.getElementById('fab').style.display=(tab==='main'&&!isViewer&&(c||isAdmin))?'block':'none';
   document.getElementById('pen').classList.toggle('on',editing);
   document.getElementById('tabs').innerHTML=TABS.map(function(t){return '<button data-t="'+t[0]+'" class="t-'+t[0]+(tab===t[0]?' on':'')+'">'+t[1]+'</button>'}).join('');
@@ -271,9 +316,9 @@ function render(){
   if(tab==='main'){
     var ks=kids(c),os=S.orders.filter(function(o){return o.node===c});
     if(c&&node(c)&&node(c).parent!==null)h+='<div class="excard"><div class="exhead">Example Link<button class="exinfo'+(exOpen?' on':'')+'" data-exinfo="1" aria-label="About this link">?</button></div><div class="exlink">https://www.instagram.com/p/........../</div>'+(exOpen?'<div class="exnote">Orders must use this link format. Links in any other format may cause the order to fail.</div>':'')+'</div>';
-    if(!ks.length&&!os.length)h+='<div class="empty"><b>✨</b>'+(!c?'Clean slate.'+(isViewer?'':'<br>Tap + to create your first title.'):(node(c).parent===null?'No sites yet.'+(isViewer?'':'<br>Tap + to add a website.'):'No orders yet.'+(isViewer?'':'<br>Tap + to add an order.')))+'</div>';
+    if(!ks.length&&!os.length)h+='<div class="empty"><b>\u2728</b>'+(!c?'Clean slate.'+(isViewer?'':'<br>Tap + to create your first title.'):(node(c).parent===null?'No sites yet.'+(isViewer?'':'<br>Tap + to add a website.'):'No orders yet.'+(isViewer?'':'<br>Tap + to add an order.')))+'</div>';
     if(ks.length){if(c)h+='<div class="sg">Sites</div>';ks.forEach(function(k){var n=kids(k.id).length,m=S.orders.filter(function(o){return o.node===k.id}).length,sub=k.parent===null?(n+(n===1?' site':' sites')):(m+(m===1?' order':' orders'));
-      h+='<div class="sec" data-open="'+k.id+'">'+(editing&&k.parent!==null?'<span class="grip" aria-label="Drag to reorder">⋮⋮</span>':'')+'<div class="ico'+(k.img?'':' l')+(k.parent===null&&isAdmin&&editing?' ed':'')+'"'+(k.parent===null&&isAdmin&&editing?' data-icon="'+k.id+'"':'')+'>'+(k.img?'<img src="'+k.img+'" alt="">':esc(k.title.charAt(0).toUpperCase()))+'</div><div class="i"><div class="t">'+esc(k.title)+'</div><div class="s">'+sub+'</div></div>'+(editing&&(isAdmin||k.parent!==null)?'<button class="xdel" data-delnode="'+k.id+'" aria-label="Delete">✕</button>':'')+'<span class="chev">›</span></div>'})}
+      h+='<div class="sec" data-open="'+k.id+'">'+(editing&&k.parent!==null?'<span class="grip" aria-label="Drag to reorder">\u22ee\u22ee</span>':'')+'<div class="ico'+(k.img?'':' l')+(k.parent===null&&isAdmin&&editing?' ed':'')+'"'+(k.parent===null&&isAdmin&&editing?' data-icon="'+k.id+'"':'')+'>'+(k.img?'<img src="'+k.img+'" alt="">':esc(k.title.charAt(0).toUpperCase()))+'</div><div class="i"><div class="t">'+esc(k.title)+'</div><div class="s">'+sub+'</div></div>'+(editing&&(isAdmin||k.parent!==null)?'<button class="xdel" data-delnode="'+k.id+'" aria-label="Delete">\u2715</button>':'')+'<span class="chev">\u203a</span></div>'})}
     STS.forEach(function(s){var g=os.filter(function(o){return o.status===s[0]});if(g.length)h+='<div class="sg"><span class="dot" style="background:'+s[2]+'"></span>'+s[1]+'</div>'+g.map(ordHtml).join('')});
   }else{
     var list=S.orders.filter(function(o){return o.status===tab});
@@ -284,7 +329,7 @@ function render(){
       var mn=node(m);h+='<div class="mh">'+(mn.img?'<img class="me" src="'+mn.img+'" alt="">':'')+'<span class="mt">'+esc(mn.title)+'</span></div>';
       Object.keys(groups[m]).forEach(function(s){
         var key=tab+'|'+m+'|'+s,op=openG[key],g=groups[m][s];
-        h+='<button class="sh" data-tog="'+key+'"><span>'+(op?'▾ ':'▸ ')+(s==='_'?'General':esc(node(s).title))+'</span><span class="cnt">'+g.length+'</span></button>'+(op?g.map(ordHtml).join(''):'');
+        h+='<button class="sh" data-tog="'+key+'"><span>'+(op?'\u25be ':'\u25b8 ')+(s==='_'?'General':esc(node(s).title))+'</span><span class="cnt">'+g.length+'</span></button>'+(op?g.map(ordHtml).join(''):'');
       });
     });
   }
@@ -339,7 +384,7 @@ function money(v){var n=Number(v);return isFinite(n)?'$'+n.toFixed(n<1?4:2):Stri
 function mapStatus(s){s=String(s||'').toLowerCase();if(s==='completed')return 'working';if(s==='partial')return 'partial';if(/cancel|refund|fail|error/.test(s))return 'failed';return 'processing'}
 async function checkOrder(id){
   var o=S.orders.find(function(x){return x.id===id});if(!o)return;var site=siteOf(o);
-  openSheet('<h3>Order status</h3><p class="pinfo">'+esc(o.title)+' · '+esc(site)+' · #'+esc(o.oid)+'</p><div id="cres" class="pinfo">Checking with '+esc(site)+'...</div><button class="btn alt" id="x">Close</button>');
+  openSheet('<h3>Order status</h3><p class="pinfo">'+esc(o.title)+' \u00b7 '+esc(site)+' \u00b7 #'+esc(o.oid)+'</p><div id="cres" class="pinfo">Checking with '+esc(site)+'...</div><button class="btn alt" id="x">Close</button>');
   document.getElementById('x').onclick=closeSheet;
   var r=await panelCall(site,{action:'status',order:o.oid});var el=document.getElementById('cres');if(!el)return;
   if(r.error||!r.status){el.innerHTML='<div class="perr">'+esc(r.error||'The panel did not return a status.')+'</div>';return}
@@ -349,13 +394,13 @@ async function checkOrder(id){
 }
 async function placeOrder(id){
   var o=S.orders.find(function(x){return x.id===id});if(!o)return;var site=siteOf(o),svc=null;
-  openSheet('<h3>Place order</h3><p class="pinfo">'+esc(o.title)+' · '+esc(site)+' · service '+esc(o.svc)+'<br><span id="pbal">Checking balance...</span><br><span id="psvc"></span></p><input type="url" id="pl" placeholder="https://www.instagram.com/p/........../" autocomplete="off" autocapitalize="off" inputmode="url"><input type="number" id="pq" inputmode="numeric" placeholder="Quantity"><div class="pinfo" id="pcost">Estimated cost: —</div><button class="btn" id="ok">Review order</button><div class="perr" id="perr"></div><button class="btn alt" id="x">Cancel</button>');
+  openSheet('<h3>Place order</h3><p class="pinfo">'+esc(o.title)+' \u00b7 '+esc(site)+' \u00b7 service '+esc(o.svc)+'<br><span id="pbal">Checking balance...</span><br><span id="psvc"></span></p><input type="url" id="pl" placeholder="https://www.instagram.com/p/........../" autocomplete="off" autocapitalize="off" inputmode="url"><input type="number" id="pq" inputmode="numeric" placeholder="Quantity"><div class="pinfo" id="pcost">Estimated cost: \u2014</div><button class="btn" id="ok">Review order</button><div class="perr" id="perr"></div><button class="btn alt" id="x">Cancel</button>');
   document.getElementById('x').onclick=closeSheet;
   var rate=function(){return svc&&svc.rate!=null?Number(svc.rate):Number(o.price)};
-  var upd=function(){var q=Number(document.getElementById('pq').value);var c=document.getElementById('pcost');if(c)c.textContent='Estimated cost: '+(q>0&&isFinite(rate())?money(rate()*q/1000):'—')};
+  var upd=function(){var q=Number(document.getElementById('pq').value);var c=document.getElementById('pcost');if(c)c.textContent='Estimated cost: '+(q>0&&isFinite(rate())?money(rate()*q/1000):'\u2014')};
   document.getElementById('pq').oninput=upd;
   panelCall(site,{action:'balance'}).then(function(r){var e=document.getElementById('pbal');if(e)e.textContent=r.error?'Balance: '+r.error:'Balance: '+money(r.balance)+(r.currency?' '+r.currency:'')});
-  panelCall(site,{action:'service',service:o.svc}).then(function(r){var e=document.getElementById('psvc');if(!e)return;if(r.error){e.textContent=r.error;return}svc=r;e.textContent=r.name+' · '+money(r.rate)+' per 1,000 · min '+r.min+', max '+r.max;upd()});
+  panelCall(site,{action:'service',service:o.svc}).then(function(r){var e=document.getElementById('psvc');if(!e)return;if(r.error){e.textContent=r.error;return}svc=r;e.textContent=r.name+' \u00b7 '+money(r.rate)+' per 1,000 \u00b7 min '+r.min+', max '+r.max;upd()});
   document.getElementById('ok').onclick=function(){
     var link=document.getElementById('pl').value.trim(),q=document.getElementById('pq').value.trim(),err=document.getElementById('perr');err.textContent='';
     if(!/^https?:\/\/\S+$/i.test(link)){err.textContent='Paste the full link, starting with https://';return}
@@ -404,7 +449,7 @@ async function openMods(){
   var el=document.getElementById('mlist');if(!el)return;
   if(r.error){el.textContent='Could not load mods: '+r.error.message;return}
   if(!r.data.length){el.textContent='No mods yet.';return}
-  el.innerHTML=r.data.map(function(x){var v=x.role==='viewer';return '<div class="mrow"><span>'+esc(x.email||x.user_id)+'</span><span class="rtag'+(v?' v':'')+'">'+(v?'Viewer':'Mod')+'</span><button data-rm="'+x.user_id+'" data-em="'+esc(x.email||'')+'" aria-label="Revoke">✕</button></div>'}).join('');
+  el.innerHTML=r.data.map(function(x){var v=x.role==='viewer';return '<div class="mrow"><span>'+esc(x.email||x.user_id)+'</span><span class="rtag'+(v?' v':'')+'">'+(v?'Viewer':'Mod')+'</span><button data-rm="'+x.user_id+'" data-em="'+esc(x.email||'')+'" aria-label="Revoke">\u2715</button></div>'}).join('');
   el.onclick=function(ev){var b=ev.target.closest('[data-rm]');if(!b)return;var id=b.dataset.rm,em=b.dataset.em;
     openSheet('<h3>Revoke access?</h3><p style="color:var(--mute);margin:0 0 14px">'+esc(em)+' will be logged out and locked out of the app.</p><button class="btn dangerbtn" id="yes">Yes, revoke</button><button class="btn alt" id="x">No</button>');
     document.getElementById('x').onclick=openMods;
@@ -438,9 +483,9 @@ function drawCreds(){
   var el=document.getElementById('clist');
   if(!CR.length){el.innerHTML='<div class="empty" style="margin-top:60px"><b>\u{1F510}</b>No logins yet.'+(isAdmin?'<br>Tap + Add to save one.':'')+'</div>';return}
   el.innerHTML=CR.map(function(c){var sh=shown[c.id];
-    return '<div class="ccard"><div class="ct"><span>'+esc(c.site)+'</span>'+(isAdmin?'<button class="xdel" data-cdel="'+c.id+'" aria-label="Delete">✕</button>':'')+'</div>'
+    return '<div class="ccard"><div class="ct"><span>'+esc(c.site)+'</span>'+(isAdmin?'<button class="xdel" data-cdel="'+c.id+'" aria-label="Delete">\u2715</button>':'')+'</div>'
     +'<div class="cf"><span class="cl">Email</span><span class="cv">'+esc(c.email)+'</span><button data-ccopy="'+c.id+'" data-f="email">Copy</button></div>'
-    +'<div class="cf"><span class="cl">Password</span><span class="cv">'+(sh?esc(c.password):'••••••••')+'</span><button data-cshow="'+c.id+'">'+(sh?'Hide':'Show')+'</button><button data-ccopy="'+c.id+'" data-f="password">Copy</button></div></div>'}).join('');
+    +'<div class="cf"><span class="cl">Password</span><span class="cv">'+(sh?esc(c.password):'\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022')+'</span><button data-cshow="'+c.id+'">'+(sh?'Hide':'Show')+'</button><button data-ccopy="'+c.id+'" data-f="password">Copy</button></div></div>'}).join('');
 }
 function addCred(){
   openSheet('<h3>New login</h3><input type="text" id="cs" placeholder="Website name" autocomplete="off"><input type="text" id="ce" placeholder="Email or username" autocomplete="off" autocapitalize="off"><input type="text" id="cp" placeholder="Password" autocomplete="off" autocapitalize="off"><button class="btn" id="ok">Add login info</button><div id="cm" style="color:var(--bad);margin-top:10px;font-size:15px"></div><button class="btn alt" id="x">Cancel</button>');
@@ -552,6 +597,127 @@ document.getElementById('lgo').onclick=async function(){
 document.getElementById('lfg').onclick=forgotPw;
 document.addEventListener('visibilitychange',refresh);
 setInterval(refresh,20000);
+setInterval(function(){if(otApi&&user&&scr==='orders'&&!document.hidden&&document.getElementById('veil').style.display!=='flex')otApi.reload()},20000);
+/* ---------- Orders Tracker screen ---------- */
+var otApi=null,VKEY='orders-tracker-videos-v1',vLocal=false,vSnap={};
+function vRead(){try{var r=JSON.parse(localStorage.getItem(VKEY)||'[]');return Array.isArray(r)?r:[]}catch(e){return []}}
+function vWrite(l){try{localStorage.setItem(VKEY,JSON.stringify(l))}catch(e){}}
+function vNote(){document.getElementById('otnote').style.display=(vLocal&&!isViewer)?'block':'none'}
+var vStore={
+  load:async function(){
+    var r=await sb.from('videos').select('id,data,created_at').order('created_at',{ascending:true});
+    if(r.error){if(/videos|relation|schema cache|does not exist|not find/i.test(r.error.message||'')){vLocal=true;vNote();return vRead()}throw r.error}
+    vLocal=false;vNote();
+    var list=r.data.map(function(x){var o=Object.assign({},x.data||{});o.id=x.id;return o});
+    vSnap={};list.forEach(function(o){vSnap[o.id]=JSON.stringify(o)});
+    if(!list.length&&!isViewer){var loc=vRead();if(loc.length){await vStore.save(loc);vWrite([]);return loc}}
+    return list;
+  },
+  save:async function(list){
+    if(vLocal||!sb||!user){vWrite(list);return}
+    var up=[],now={},r;
+    list.forEach(function(o){var j=JSON.stringify(o);now[o.id]=j;if(vSnap[o.id]!==j)up.push({id:o.id,data:o})});
+    var del=Object.keys(vSnap).filter(function(id){return !now[id]});
+    if(del.length){r=await sb.from('videos').delete().in('id',del);if(r.error)throw r.error}
+    if(up.length){r=await sb.from('videos').upsert(up);if(r.error)throw r.error}
+    vSnap=now;
+  }
+};
+function mountOrders(){
+  if(otApi)otApi.destroy();
+  otApi=OrderTracker.mount(document.getElementById('otroot'),{
+    monthlyTarget:10,labels:{order:'video',orders:'videos'},readOnly:isViewer,store:vStore,
+    linkPlaceholder:'https://www.instagram.com/p/........../',
+    confirm:function(what,go){askDel(what,go)},
+    onPick:pickService});
+}
+var STAT_NAME={views:'Views',likes:'Likes',shares:'Shares',saves:'Saves',reposts:'Reposts',comments:'Comments'};
+function ppk(p){var v=parseFloat(String(p==null?'':p).replace(/[^0-9.]/g,''));return isFinite(v)?v:0}
+function money(v){return '$'+(Math.round(v*100)/100).toFixed(2)}
+function pickService(v,stat,done){
+  var nm=STAT_NAME[stat]||stat,sec=S.nodes.find(function(n){return n.parent===null&&n.title.trim().toLowerCase()===nm.toLowerCase()});
+  var sites=sec?kids(sec.id):[],ids=sites.map(function(x){return x.id});
+  var all=S.orders.filter(function(o){return ids.indexOf(o.node)>=0});
+  var plan=(v.plan||{})[stat]||null,sel=plan&&plan.ref&&all.some(function(o){return o.id===plan.ref})?plan.ref:null;
+  var selO=sel&&all.find(function(o){return o.id===sel});
+  var ptab=selO?selO.status:'working',had=!!((v.goals||{})[stat]);
+  var PT=[['working','Working'],['partial','Partial'],['failed','Failed'],['processing','Testing']];
+  function list(){var g=all.filter(function(o){return o.status===ptab});
+    if(!sec)return '<div class="pk-none">There’s no “'+esc(nm)+'” section on your Panels screen yet, so there are no services to pick. You can still set a goal below.</div>';
+    if(!g.length)return '<div class="pk-none">No '+esc(PT.filter(function(t){return t[0]===ptab})[0][1].toLowerCase())+' '+esc(nm.toLowerCase())+' services yet.</div>';
+    return g.map(function(o){var st=node(o.node);return '<button class="pk-row'+(o.id===sel?' on':'')+'" data-pk="'+o.id+'"><span style="min-width:0"><b>'+esc(o.title)+'</b><small>'+esc(st?st.title:'')+'</small></span><span class="pp">'+money(ppk(o.price))+' / 1K</span></button>'}).join('')}
+  function cost(){var q=parseFloat(String(document.getElementById('pkq').value).replace(/[^0-9.]/g,''))||0,o=sel&&all.find(function(x){return x.id===sel});
+    document.getElementById('pkc').innerHTML='<span>'+(o?'Cost at '+money(ppk(o.price))+' per 1,000':'Pick a service to see the cost')+'</span><b>'+(o?money(ppk(o.price)*q/1000):'')+'</b>'}
+  function paint(){document.getElementById('pkt').innerHTML=PT.map(function(t){return '<button class="t-'+t[0]+(ptab===t[0]?' on':'')+'" data-pt="'+t[0]+'">'+t[1]+'</button>'}).join('');document.getElementById('pkl').innerHTML=list();cost()}
+  openSheet('<h3>'+esc(nm)+' for '+(v.title?esc(v.title):'this video')+'</h3><div class="pinfo">Pick a service from your Panels list, then set how many you want.</div><div class="pk-tabs" id="pkt"></div><div class="pk-list" id="pkl"></div><input type="text" id="pkq" inputmode="numeric" placeholder="How many '+esc(nm.toLowerCase())+'?" value="'+(had?(v.goals[stat]):'')+'" autocomplete="off"><div class="pk-cost" id="pkc"></div><button class="btn" id="ok">Save</button>'+(had?'<button class="btn alt" id="rm" style="color:var(--bad)">Remove '+esc(nm.toLowerCase())+'</button>':'')+'<button class="btn alt" id="x">Cancel</button>');
+  paint();
+  document.getElementById('pkt').onclick=function(e){var b=e.target.closest('[data-pt]');if(b){ptab=b.dataset.pt;paint()}};
+  document.getElementById('pkl').onclick=function(e){var b=e.target.closest('[data-pk]');if(!b)return;sel=sel===b.dataset.pk?null:b.dataset.pk;paint()};
+  document.getElementById('pkq').oninput=cost;
+  document.getElementById('ok').onclick=function(){
+    var q=Math.round(parseFloat(String(document.getElementById('pkq').value).replace(/[^0-9.]/g,''))||0);
+    if(q<=0){toast('Type how many '+nm.toLowerCase()+' you want');return}
+    var o=sel&&all.find(function(x){return x.id===sel}),st=o&&node(o.node);
+    closeSheet();done({qty:q,plan:o?{ref:o.id,site:st?st.title:'',svc:o.title,price:ppk(o.price),sid:o.svc||''}:null});
+  };
+  if(had)document.getElementById('rm').onclick=function(){askDel(nm.toLowerCase()+' goal from this video',function(){done(null)})};
+  document.getElementById('x').onclick=closeSheet;
+}
+
+/* ---------- swipe between the two screens ---------- */
+var scr='orders',sw=null,swUntil=0,scrY={orders:0,panels:0};
+function scrEl(n){return document.getElementById(n==='orders'?'oscreen':'pscreen')}
+function paintDots(){document.querySelectorAll('.dots button').forEach(function(b){b.classList.toggle('on',b.dataset.scr===scr)})}
+function setScreen(n,dir){
+  if(n===scr)return;
+  var from=scrEl(scr),to=scrEl(n);scrY[scr]=window.scrollY;
+  from.style.display='none';from.style.transform='';from.style.opacity='';
+  scr=n;to.style.display='block';document.body.classList.toggle('ot-on',n==='orders');
+  document.getElementById('menu').classList.remove('on');paintDots();window.scrollTo(0,scrY[n]||0);
+  if(dir==null)dir=n==='panels'?1:-1;
+  try{to.animate([{transform:'translateX('+(dir*36)+'%)',opacity:.3},{transform:'none',opacity:1}],{duration:260,easing:'cubic-bezier(.2,.8,.2,1)'})}catch(e){}
+}
+function canSwipe(t){
+  if(!user||editing||drag||dragging)return false;
+  if(document.getElementById('veil').style.display==='flex'||document.getElementById('cpage').classList.contains('on')||document.getElementById('login').style.display==='flex')return false;
+  if(t.closest&&t.closest('#tabs,.ot-seg,input,textarea,select,.ot-pop,#menu'))return false;
+  if(scr==='orders'&&document.querySelector('#otroot .ot-egrid'))return false;
+  return true;
+}
+document.addEventListener('touchstart',function(e){
+  if(e.touches.length!==1||!canSwipe(e.target)){sw=null;return}
+  var t=e.touches[0];sw={x:t.clientX,y:t.clientY,on:false,dead:false,dx:0};
+},{passive:true});
+document.addEventListener('touchmove',function(e){
+  if(!sw||sw.dead)return;
+  var t=e.touches[0],dx=t.clientX-sw.x,dy=t.clientY-sw.y;
+  if(!sw.on){
+    if(Math.abs(dy)>10&&Math.abs(dy)>=Math.abs(dx)){sw.dead=true;return}
+    if(Math.abs(dx)>10&&Math.abs(dx)>Math.abs(dy)*1.2){sw.on=true;document.body.classList.add('swiping');clearTimeout(ht);if(document.activeElement&&document.activeElement.blur)document.activeElement.blur()}
+    else return;
+  }
+  e.preventDefault();sw.dx=dx;
+  var el=scrEl(scr);el.style.transform='translateX('+dx+'px)';el.style.opacity=String(1-Math.min(Math.abs(dx)/innerWidth,1)*.6);
+},{passive:false});
+function swEnd(){
+  if(!sw)return;var s=sw;sw=null;if(!s.on)return;
+  swUntil=Date.now()+500;setTimeout(function(){document.body.classList.remove('swiping')},30);
+  var el=scrEl(scr);
+  if(Math.abs(s.dx)>Math.min(80,innerWidth*.2)){
+    var dir=s.dx<0?1:-1,next=scr==='orders'?'panels':'orders';
+    var a=null;try{a=el.animate([{transform:'translateX('+s.dx+'px)',opacity:el.style.opacity},{transform:'translateX('+(-dir*100)+'%)',opacity:0}],{duration:160,easing:'ease-in'})}catch(e){}
+    var go=function(){setScreen(next,dir)};if(a)a.onfinish=go;else go();
+  }else{
+    try{el.animate([{transform:'translateX('+s.dx+'px)',opacity:el.style.opacity},{transform:'none',opacity:1}],{duration:200,easing:'ease-out'})}catch(e){}
+    el.style.transform='';el.style.opacity='';
+  }
+}
+document.addEventListener('touchend',swEnd);
+document.addEventListener('touchcancel',swEnd);
+document.addEventListener('click',function(e){if(Date.now()<swUntil){e.stopPropagation();e.preventDefault()}},true);
+document.addEventListener('click',function(e){var b=e.target.closest('[data-scr]');if(b)setScreen(b.dataset.scr)});
+paintDots();
+
 boot();
 </script>
 </body>
