@@ -131,6 +131,16 @@ html,body{overflow-x:hidden;max-width:100%}
 .oid{display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:top;font-size:12px;font-weight:600;letter-spacing:.02em;color:#c4b5fd;background:rgba(139,92,246,.14);border:1px solid rgba(139,92,246,.3);border-radius:8px;padding:2px 8px;margin-bottom:6px;font-variant-numeric:tabular-nums}
 #tabs button.t-processing.on{background:linear-gradient(135deg,#b45309,#f59e0b);box-shadow:0 4px 12px rgba(251,191,36,.4)}
 .idbtn{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:5px 10px;border-radius:9px;border:1px dashed rgba(139,92,246,.55);background:rgba(139,92,246,.1);color:#c4b5fd;font-size:13px;font-weight:600}
+.oacts{display:flex;gap:8px;margin-top:10px}
+.oact{flex:1;padding:9px 0;border-radius:12px;border:1px solid var(--line);background:var(--card2);color:var(--ink);font-size:14px;font-weight:600}
+.oact.go{background:linear-gradient(135deg,var(--a1),var(--a2));border-color:transparent;color:#fff}
+.svc{display:inline-block;margin:0 0 6px 6px;font-size:12px;font-weight:600;color:var(--a2);background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.28);border-radius:8px;padding:2px 8px;vertical-align:top}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:15px}
+.kv span:first-child{color:var(--mute)}
+.kv span:last-child{text-align:right;word-break:break-all}
+.pinfo{color:var(--mute);font-size:14px;margin:-6px 0 12px;line-height:1.5}
+.perr{color:var(--bad);font-size:14px;margin-top:10px;min-height:18px}
+.btn:disabled{opacity:.55}
 .dragging{position:relative;z-index:6;background:#1d1d2c!important;box-shadow:0 14px 34px rgba(0,0,0,.55);border-color:var(--a1)!important}
 </style>
 </head>
@@ -148,7 +158,7 @@ html,body{overflow-x:hidden;max-width:100%}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="icons.js"></script>
 <script>
-var KEY='order-tracker-v1',S={nodes:[],orders:[]},tab='main',path=[],openG={},sb=null,user=null,isAdmin=false,snap={n:{},o:{}},q=Promise.resolve(),hasPos=false,drag=null,dragging=false,gripOrders=false,isViewer=false,exOpen=false,hasOid=false;
+var KEY='order-tracker-v1',S={nodes:[],orders:[]},tab='main',path=[],openG={},sb=null,user=null,isAdmin=false,snap={n:{},o:{}},q=Promise.resolve(),hasPos=false,drag=null,dragging=false,gripOrders=false,isViewer=false,exOpen=false,hasOid=false,hasSvc=false;
 var SB_URL='https://ttnvbmqtyxbqfyxadjdf.supabase.co',SB_KEY='sb_publishable_1gfteu6dl--6yOo8FKMFow_QmAO7FGE';
 function localOld(){try{var r=JSON.parse(localStorage.getItem(KEY));if(r&&r.nodes&&r.nodes.length)return r}catch(e){}return null}
 function seedDefaults(){
@@ -162,9 +172,9 @@ function seedDefaults(){
    ['Comments','<path d="M4 20l1.5-4A8 8 0 1 1 8.5 19z"/>']
   ].forEach(function(r){S.nodes.push({id:uid(),title:r[0],parent:null,img:IMGS[r[0]]||ic(r[1])})});
 }
-function toast(m){var t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(function(){t.style.display='none'},4500)}
+function toast(m,good){var t=document.getElementById('toast');t.textContent=m;t.style.display='block';t.style.borderColor=good?'var(--ok)':'';t.style.background=good?'#0f2a20':'';clearTimeout(toast.h);toast.h=setTimeout(function(){t.style.display='none'},4500)}
 function depth(n){var d=0;while(n&&n.parent){n=node(n.parent);d++}return d}
-function mkSnap(){var n={},o={};S.nodes.forEach(function(x){n[x.id]=JSON.stringify([x.title,x.parent||null,x.img||null,x.pos==null?null:x.pos])});S.orders.forEach(function(x){o[x.id]=JSON.stringify([x.node,x.title,String(x.price),x.status,!!x.star,x.pos==null?null:x.pos,x.oid||''])});return{n:n,o:o}}
+function mkSnap(){var n={},o={};S.nodes.forEach(function(x){n[x.id]=JSON.stringify([x.title,x.parent||null,x.img||null,x.pos==null?null:x.pos])});S.orders.forEach(function(x){o[x.id]=JSON.stringify([x.node,x.title,String(x.price),x.status,!!x.star,x.pos==null?null:x.pos,x.oid||'',x.svc||''])});return{n:n,o:o}}
 function save(){q=q.then(push).catch(function(e){toast('Not saved: '+((e&&e.message)||e));return load().then(render)})}
 async function push(){
   if(!sb||!user)return;
@@ -177,11 +187,15 @@ async function push(){
   if(delN.length){r=await sb.from('nodes').delete().in('id',delN);if(r.error)throw r.error}
   if(upN.length){upN.sort(function(a,b){return depth(a)-depth(b)});r=await sb.from('nodes').upsert(upN.map(function(n){var x={id:n.id,title:n.title,parent:n.parent||null,img:n.img||null};if(hasPos)x.pos=n.pos==null?null:n.pos;return x}));if(r.error)throw r.error}
   if(upO.length){
-    var withOid=hasOid||upO.some(function(o){return !!o.oid});
-    var rows=function(inc){return upO.map(function(o){var x={id:o.id,node:o.node,title:o.title,price:String(o.price),status:o.status,star:!!o.star};if(hasPos)x.pos=o.pos==null?null:o.pos;if(inc)x.order_id=o.oid||null;return x})};
-    r=await sb.from('orders').upsert(rows(withOid));
-    if(r.error&&withOid&&/order_id/.test(r.error.message||'')){r=await sb.from('orders').upsert(rows(false));if(!r.error)toast('Order saved, but the Order ID was not. Run the Order ID SQL in Supabase first.')}
-    else if(!r.error&&withOid)hasOid=true;
+    var wO=hasOid||upO.some(function(o){return !!o.oid}),wS=hasSvc||upO.some(function(o){return !!o.svc});
+    var rows=function(io,is){return upO.map(function(o){var x={id:o.id,node:o.node,title:o.title,price:String(o.price),status:o.status,star:!!o.star};if(hasPos)x.pos=o.pos==null?null:o.pos;if(io)x.order_id=o.oid||null;if(is)x.service_id=o.svc||null;return x})};
+    r=await sb.from('orders').upsert(rows(wO,wS));
+    if(r.error&&(wO||wS)&&/order_id|service_id/.test(r.error.message||'')){
+      var mo=/order_id/.test(r.error.message);var ms=/service_id/.test(r.error.message);
+      r=await sb.from('orders').upsert(rows(wO&&!mo,wS&&!ms));
+      if(r.error&&/order_id|service_id/.test(r.error.message||''))r=await sb.from('orders').upsert(rows(false,false));
+      if(!r.error)toast('Order saved, but some details were not. Run the latest SQL in Supabase first.')}
+    else if(!r.error){if(wO)hasOid=true;if(wS)hasSvc=true}
     if(r.error)throw r.error}
   snap=c2;
 }
@@ -190,9 +204,9 @@ async function load(){
   var b=await sb.from('orders').select('*').order('created_at',{ascending:true});
   if(a.error)throw a.error;if(b.error)throw b.error;
   var smp=a.data[0]||b.data[0];if(smp)hasPos=('pos' in smp);
-  if(b.data[0])hasOid=('order_id' in b.data[0]);
+  if(b.data[0]){hasOid=('order_id' in b.data[0]);hasSvc=('service_id' in b.data[0])}
   S.nodes=a.data.map(function(r){return{id:r.id,title:r.title,parent:r.parent||null,img:r.img||null,pos:r.pos==null?null:r.pos}});
-  S.orders=b.data.map(function(r){return{id:r.id,node:r.node,title:r.title,price:r.price,status:r.status,star:!!r.star,pos:r.pos==null?null:r.pos,oid:r.order_id||''}});
+  S.orders=b.data.map(function(r){return{id:r.id,node:r.node,title:r.title,price:r.price,status:r.status,star:!!r.star,pos:r.pos==null?null:r.pos,oid:r.order_id||'',svc:r.service_id||''}});
   sortAll();
   path=path.filter(function(id){return node(id)});
   snap=mkSnap();
@@ -239,8 +253,9 @@ var editing=false;
 var TABS=[['main','Main'],['processing','Testing'],['working','Working'],['partial','Partial'],['failed','Failed']];
 var STS=[['processing','Testing','var(--wait)'],['working','Working','var(--ok)'],['partial','Partial','var(--part)'],['failed','Failed','var(--bad)']];
 function ordHtml(o){
-  return '<div class="ord" data-oid="'+o.id+'" data-grp="'+o.status+'"><div class="top">'+(gripOrders?'<span class="grip" aria-label="Drag to reorder">⋮⋮</span>':'')+'<div style="flex:1;min-width:0">'+(o.oid?'<span class="oid">ID: '+esc(o.oid)+'</span>':'')+'<div class="t">'+esc(o.title)+'</div><div class="price">'+esc(o.price)+' per 1,000</div>'+(editing&&!isViewer?'<button class="idbtn" data-editid="'+o.id+'">'+(o.oid?'✎ Edit ID':'+ Add ID')+'</button>':'')+'</div>'
+  return '<div class="ord" data-oid="'+o.id+'" data-grp="'+o.status+'"><div class="top">'+(gripOrders?'<span class="grip" aria-label="Drag to reorder">⋮⋮</span>':'')+'<div style="flex:1;min-width:0">'+(o.oid?'<span class="oid">ID: '+esc(o.oid)+'</span>':'')+(o.svc?'<span class="svc">Service '+esc(o.svc)+'</span>':'')+'<div class="t">'+esc(o.title)+'</div><div class="price">'+esc(o.price)+' per 1,000</div>'+(editing&&!isViewer?'<button class="idbtn" data-editid="'+o.id+'">✎ Edit details</button>':'')+'</div>'
   +'<div>'+(editing?'<button class="xdel" data-delord="'+o.id+'" aria-label="Delete">✕</button>':'')+'</div></div>'
+  +ownerActs(o)
   +'<div class="seg">'+STS.map(function(s){return '<button class="'+s[0]+(o.status===s[0]?' on':'')+'"'+(isViewer?' disabled':' data-st="'+s[0]+'" data-o="'+o.id+'"')+'>'+s[1]+'</button>'}).join('')+'</div></div>';
 }
 function render(){
@@ -288,9 +303,9 @@ function newSite(){
   document.getElementById('x').onclick=closeSheet;
 }
 function newOrder(){
-  openSheet('<h3>Add new order</h3><input type="text" id="f1" placeholder="Order title"><input type="text" id="f3" placeholder="Order ID (optional)" autocomplete="off" autocapitalize="off"><input type="number" id="f2" inputmode="decimal" placeholder="Price per thousand"><button class="btn" id="ok">Add order</button><button class="btn alt" id="x">Cancel</button>');
-  document.getElementById('ok').onclick=function(){var t=document.getElementById('f1').value.trim(),p=document.getElementById('f2').value.trim(),oi=document.getElementById('f3').value.trim();if(!t||!p)return;
-    S.orders.push({id:uid(),node:cur(),title:t,price:p,status:'processing',star:false,oid:oi});save();closeSheet();render()};
+  openSheet('<h3>Add new order</h3><input type="text" id="f1" placeholder="Order title"><input type="text" id="f3" placeholder="Order ID (optional)" autocomplete="off" autocapitalize="off"><input type="text" id="f4" inputmode="numeric" placeholder="Service number (optional)" autocomplete="off"><input type="number" id="f2" inputmode="decimal" placeholder="Price per thousand"><button class="btn" id="ok">Add order</button><button class="btn alt" id="x">Cancel</button>');
+  document.getElementById('ok').onclick=function(){var t=document.getElementById('f1').value.trim(),p=document.getElementById('f2').value.trim(),oi=document.getElementById('f3').value.trim(),sv=document.getElementById('f4').value.trim();if(!t||!p)return;
+    S.orders.push({id:uid(),node:cur(),title:t,price:p,status:'processing',star:false,oid:oi,svc:sv});save();closeSheet();render()};
   document.getElementById('x').onclick=closeSheet;
 }
 function openIcon(id){
@@ -302,12 +317,67 @@ function openIcon(id){
   var rm=document.getElementById('rm');if(rm)rm.onclick=function(){delete n.img;save();closeSheet();render()};
   document.getElementById('x').onclick=closeSheet;
 }
+var PANELS=['naizop.com','peakerr.com','smbpanel.net','justanotherpanel.com','morethanpanel.com','bulkfollows.com','smmfollows.com'];
+function siteOf(o){var n=node(o.node);return n?String(n.title).toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0]:''}
+function isPanel(d){return PANELS.indexOf(d)>=0}
+function ownerActs(o){
+  if(!isAdmin||isViewer||!isPanel(siteOf(o)))return '';
+  var b='';
+  if(o.svc)b+='<button class="oact go" data-place="'+o.id+'">Place order</button>';
+  if(o.oid&&/^\d+$/.test(o.oid))b+='<button class="oact" data-check="'+o.id+'">Check status</button>';
+  return b?'<div class="oacts">'+b+'</div>':'';
+}
+async function panelCall(site,payload){
+  try{
+    var r=await sb.functions.invoke('panel',{body:Object.assign({site:site},payload)});
+    if(r.error){var msg=r.error.message||'Request failed';try{var j=await r.error.context.json();if(j&&j.error)msg=j.error}catch(e){}
+      if(/Failed to send|not found|404/i.test(msg))msg='The panel function is not set up yet in Supabase.';return {error:msg}}
+    return r.data||{error:'No reply from the panel'};
+  }catch(e){return {error:String((e&&e.message)||e)}}
+}
+function money(v){var n=Number(v);return isFinite(n)?'$'+n.toFixed(n<1?4:2):String(v)}
+function mapStatus(s){s=String(s||'').toLowerCase();if(s==='completed')return 'working';if(s==='partial')return 'partial';if(/cancel|refund|fail|error/.test(s))return 'failed';return 'processing'}
+async function checkOrder(id){
+  var o=S.orders.find(function(x){return x.id===id});if(!o)return;var site=siteOf(o);
+  openSheet('<h3>Order status</h3><p class="pinfo">'+esc(o.title)+' · '+esc(site)+' · #'+esc(o.oid)+'</p><div id="cres" class="pinfo">Checking with '+esc(site)+'...</div><button class="btn alt" id="x">Close</button>');
+  document.getElementById('x').onclick=closeSheet;
+  var r=await panelCall(site,{action:'status',order:o.oid});var el=document.getElementById('cres');if(!el)return;
+  if(r.error||!r.status){el.innerHTML='<div class="perr">'+esc(r.error||'The panel did not return a status.')+'</div>';return}
+  var ns=mapStatus(r.status),lbl=STS.filter(function(s){return s[0]===ns})[0][1];
+  el.innerHTML='<div class="kv"><span>Panel status</span><span>'+esc(r.status)+'</span></div>'+(r.remains!=null?'<div class="kv"><span>Remaining</span><span>'+esc(r.remains)+'</span></div>':'')+(r.start_count!=null?'<div class="kv"><span>Start count</span><span>'+esc(r.start_count)+'</span></div>':'')+(r.charge!=null?'<div class="kv"><span>Charged</span><span>'+esc(money(r.charge))+(r.currency?' '+esc(r.currency):'')+'</span></div>':'')+'<p class="pinfo" style="margin-top:12px">Marked as <b>'+esc(lbl)+'</b> in the app.</p>';
+  if(o.status!==ns){o.status=ns;save();render()}
+}
+async function placeOrder(id){
+  var o=S.orders.find(function(x){return x.id===id});if(!o)return;var site=siteOf(o),svc=null;
+  openSheet('<h3>Place order</h3><p class="pinfo">'+esc(o.title)+' · '+esc(site)+' · service '+esc(o.svc)+'<br><span id="pbal">Checking balance...</span><br><span id="psvc"></span></p><input type="url" id="pl" placeholder="https://www.instagram.com/p/........../" autocomplete="off" autocapitalize="off" inputmode="url"><input type="number" id="pq" inputmode="numeric" placeholder="Quantity"><div class="pinfo" id="pcost">Estimated cost: —</div><button class="btn" id="ok">Review order</button><div class="perr" id="perr"></div><button class="btn alt" id="x">Cancel</button>');
+  document.getElementById('x').onclick=closeSheet;
+  var rate=function(){return svc&&svc.rate!=null?Number(svc.rate):Number(o.price)};
+  var upd=function(){var q=Number(document.getElementById('pq').value);var c=document.getElementById('pcost');if(c)c.textContent='Estimated cost: '+(q>0&&isFinite(rate())?money(rate()*q/1000):'—')};
+  document.getElementById('pq').oninput=upd;
+  panelCall(site,{action:'balance'}).then(function(r){var e=document.getElementById('pbal');if(e)e.textContent=r.error?'Balance: '+r.error:'Balance: '+money(r.balance)+(r.currency?' '+r.currency:'')});
+  panelCall(site,{action:'service',service:o.svc}).then(function(r){var e=document.getElementById('psvc');if(!e)return;if(r.error){e.textContent=r.error;return}svc=r;e.textContent=r.name+' · '+money(r.rate)+' per 1,000 · min '+r.min+', max '+r.max;upd()});
+  document.getElementById('ok').onclick=function(){
+    var link=document.getElementById('pl').value.trim(),q=document.getElementById('pq').value.trim(),err=document.getElementById('perr');err.textContent='';
+    if(!/^https?:\/\/\S+$/i.test(link)){err.textContent='Paste the full link, starting with https://';return}
+    if(!/^\d+$/.test(q)||Number(q)<1){err.textContent='Enter a whole-number quantity.';return}
+    if(svc&&((svc.min&&Number(q)<Number(svc.min))||(svc.max&&Number(q)>Number(svc.max)))){err.textContent='Quantity must be between '+svc.min+' and '+svc.max+'.';return}
+    var cost=isFinite(rate())?money(rate()*Number(q)/1000):'unknown';
+    openSheet('<h3>Confirm order</h3><div class="kv"><span>Panel</span><span>'+esc(site)+'</span></div><div class="kv"><span>Service</span><span>'+esc(o.svc)+'</span></div><div class="kv"><span>Link</span><span>'+esc(link)+'</span></div><div class="kv"><span>Quantity</span><span>'+esc(q)+'</span></div><div class="kv"><span>Estimated cost</span><span>'+esc(cost)+'</span></div><p class="pinfo" style="margin-top:12px">This spends real money from your '+esc(site)+' balance.</p><button class="btn" id="yes">Place order</button><div class="perr" id="perr2"></div><button class="btn alt" id="x">Cancel</button>');
+    document.getElementById('x').onclick=closeSheet;
+    var yes=document.getElementById('yes');
+    yes.onclick=async function(){
+      yes.disabled=true;yes.textContent='Placing...';
+      var r=await panelCall(site,{action:'add',service:o.svc,link:link,quantity:q});
+      if(r.error||!r.order){yes.disabled=false;yes.textContent='Place order';document.getElementById('perr2').textContent=r.error||'The panel did not return an order number.';return}
+      o.oid=String(r.order);o.status='processing';save();closeSheet();render();toast('Order #'+r.order+' placed on '+site+'.',true);
+    };
+  };
+}
 function editId(id){
   var o=S.orders.find(function(x){return x.id===id});if(!o)return;
-  openSheet('<h3>'+(o.oid?'Edit':'Add')+' order ID</h3><p style="color:var(--mute);margin:0 0 12px;font-size:15px">'+esc(o.title)+'</p><input type="text" id="f3" placeholder="Order ID" autocomplete="off" autocapitalize="off"><button class="btn" id="ok">Save</button>'+(o.oid?'<button class="btn alt" id="rm">Remove ID</button>':'')+'<button class="btn alt" id="x">Cancel</button>');
-  var f=document.getElementById('f3');f.value=o.oid||'';
-  document.getElementById('ok').onclick=function(){o.oid=f.value.trim();save();closeSheet();render()};
-  var rm=document.getElementById('rm');if(rm)rm.onclick=function(){o.oid='';save();closeSheet();render()};
+  openSheet('<h3>Order details</h3><p style="color:var(--mute);margin:0 0 12px;font-size:15px">'+esc(o.title)+'</p><input type="text" id="f3" placeholder="Order ID" autocomplete="off" autocapitalize="off"><input type="text" id="f4" inputmode="numeric" placeholder="Service number" autocomplete="off"><button class="btn" id="ok">Save</button><button class="btn alt" id="x">Cancel</button>');
+  var f=document.getElementById('f3'),g=document.getElementById('f4');f.value=o.oid||'';g.value=o.svc||'';
+  document.getElementById('ok').onclick=function(){o.oid=f.value.trim();o.svc=g.value.trim();save();closeSheet();render()};
   document.getElementById('x').onclick=closeSheet;
 }
 function askDel(what,fn){
@@ -449,13 +519,15 @@ document.getElementById('fab').onclick=function(){
 document.getElementById('veil').onclick=function(e){if(e.target.id==='veil')closeSheet()};
 document.addEventListener('click',function(e){
   if(e.target.closest('.grip'))return;
-  var t=e.target.closest('[data-back],[data-t],[data-open],[data-delnode],[data-delord],[data-st],[data-tog],[data-icon],[data-pen],[data-out],[data-more],[data-logout],[data-mods],[data-creds],[data-exinfo],[data-editid]');
+  var t=e.target.closest('[data-back],[data-t],[data-open],[data-delnode],[data-delord],[data-st],[data-tog],[data-icon],[data-pen],[data-out],[data-more],[data-logout],[data-mods],[data-creds],[data-exinfo],[data-editid],[data-place],[data-check]');
   var mn=document.getElementById('menu');if(!t||!t.dataset.more)mn.classList.remove('on');if(!t)return;
   var d=t.dataset;
   if(held){held=false;return}
   if(d.icon){openIcon(d.icon);return}
   else if(d.exinfo){exOpen=!exOpen}
   else if(d.editid){if(!isViewer)editId(d.editid);return}
+  else if(d.place){if(isAdmin)placeOrder(d.place);return}
+  else if(d.check){if(isAdmin)checkOrder(d.check);return}
   else if(d.pen){if(!isViewer)editing=!editing}
   else if(d.more){mn.classList.toggle('on');return}
   else if(d.logout){askLogout();return}
