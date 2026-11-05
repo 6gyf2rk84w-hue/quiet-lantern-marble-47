@@ -1,20 +1,23 @@
 // Panel Tracker: "instagram" function.
-// - Connect Instagram: each person signs in on Instagram's own screen (read-only permissions).
+// - Connect Instagram: each person signs in with Facebook (Meta's "Unified login" for new apps) and picks
+//   the Facebook Page their Instagram professional account is linked to. Read-only permissions only.
 // - Previews: thumbnails and live numbers for a video, read with the video owner's own connection.
 // - Auto-log: posts whose caption has the person's auto-log phrase / word show up as their next video.
 // Tokens are encrypted and stay in Supabase. They are never sent to anyone's phone.
 //
 // Settings (Supabase → Edge Functions → Secrets):
-//   IG_APP_ID, IG_APP_SECRET   from this app's own Meta app (Instagram API with Instagram Login)
-//   IG_TOKEN_KEY               any long random text; used to encrypt saved tokens
+//   META_APP_ID, META_APP_SECRET   App settings → Basic in this app's own Meta app
+//   META_CONFIG_ID                 the Facebook Login for Business configuration (User access token,
+//                                  permissions: instagram_basic, instagram_manage_insights, pages_show_list,
+//                                  pages_read_engagement)
+//   IG_TOKEN_KEY                   any long random text; used to encrypt saved tokens
 //   CRON_SECRET                any long random text; lets the 15-minute schedule run auto-log for everyone
 //   APP_URL (optional)         where to send people back to after connecting
-// Deploy with "Verify JWT" turned OFF: Instagram calls this function back without a Supabase login.
+// Deploy with "Verify JWT" turned OFF: Facebook sends people back here without a Supabase login.
 // The function checks the login itself for everything else.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const GRAPH = "https://graph.instagram.com/v23.0";
-const SCOPES = "instagram_business_basic,instagram_business_manage_insights";
+const GRAPH = "https://graph.facebook.com/v25.0";
 const env = (k: string) => Deno.env.get(k) || "";
 const APP_URL = env("APP_URL") || "https://6gyf2rk84w-hue.github.io/quiet-lantern-marble-47/";
 const SELF_URL = `${env("SUPABASE_URL")}/functions/v1/instagram`;
@@ -50,7 +53,7 @@ async function open(sealed: string): Promise<string> {
 class IgError extends Error { code: number; constructor(m: string, c: number) { super(m); this.code = c; } }
 async function ig(path: string, token: string, q: Record<string, string> = {}): Promise<any> {
   const u = new URL(path.startsWith("http") ? path : `${GRAPH}/${path}`);
-  Object.entries({ ...q, access_token: token }).forEach(([k, v]) => u.searchParams.set(k, v));
+  Object.entries(token ? { ...q, access_token: token } : q).forEach(([k, v]) => u.searchParams.set(k, v));
   const r = await fetch(u);
   const j = await r.json().catch(() => ({}));
   if (j?.error) throw new IgError(j.error.message || "Instagram error", +j.error.code || 0);
@@ -77,31 +80,32 @@ async function insights(id: string, token: string) {
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   const admin = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), { auth: { persistSession: false, autoRefreshToken: false } });
-  const configured = !!(env("IG_APP_ID") && env("IG_APP_SECRET") && env("IG_TOKEN_KEY"));
+  const configured = !!(env("META_APP_ID") && env("META_APP_SECRET") && env("META_CONFIG_ID") && env("IG_TOKEN_KEY"));
   const url = new URL(req.url);
 
-  // ---------- Instagram sends people back here after they tap Allow ----------
+  // ---------- Facebook sends people back here after they tap Continue ----------
   if (req.method === "GET") {
     if (url.searchParams.get("error")) return back("cancelled");
-    const code = (url.searchParams.get("code") || "").replace(/#_$/, "");
+    const code = url.searchParams.get("code") || "";
     const state = url.searchParams.get("state") || "";
     if (!code || !state || !configured) return back("error");
     try {
       const { data: st } = await admin.from("ig_states").select("*").eq("state", state).maybeSingle();
       await admin.from("ig_states").delete().eq("state", state);
       if (!st || Date.now() - Date.parse(st.created_at) > 15 * 60e3) return back("expired");
-      // code → short-lived token → 60-day token
-      const form = new URLSearchParams({ client_id: env("IG_APP_ID"), client_secret: env("IG_APP_SECRET"), grant_type: "authorization_code", redirect_uri: SELF_URL, code });
-      const r1 = await fetch("https://api.instagram.com/oauth/access_token", { method: "POST", body: form });
-      const t1 = await r1.json().catch(() => ({}));
-      if (!t1?.access_token) return back("error");
-      const t2 = await ig("https://graph.instagram.com/access_token", t1.access_token, { grant_type: "ig_exchange_token", client_secret: env("IG_APP_SECRET") });
-      const me = await ig("me", t2.access_token, { fields: "user_id,username" });
+      // code → user token → 60-day user token
+      const t1 = await ig(`${GRAPH}/oauth/access_token`, "", { client_id: env("META_APP_ID"), client_secret: env("META_APP_SECRET"), redirect_uri: SELF_URL, code });
+      const t2 = await ig(`${GRAPH}/oauth/access_token`, "", { grant_type: "fb_exchange_token", client_id: env("META_APP_ID"), client_secret: env("META_APP_SECRET"), fb_exchange_token: t1.access_token });
+      // Their Facebook Pages → the one with an Instagram professional account. A Page token made
+      // from a 60-day user token doesn't expire, so no refreshing is needed.
+      const pages = (await ig("me/accounts", t2.access_token || t1.access_token, { fields: "id,name,access_token,instagram_business_account{id,username}", limit: "100" }))?.data || [];
+      const pg = pages.find((p: any) => p?.instagram_business_account?.id && p.access_token);
+      if (!pg) return back("nopage");
       const now = new Date().toISOString();
       const { error } = await admin.from("ig_accounts").upsert({
-        user_id: st.user_id, ig_user_id: String(me.user_id || me.id || ""), username: me.username || "",
-        token: await seal(t2.access_token), expires_at: new Date(Date.now() + (+t2.expires_in || 5184000) * 1000).toISOString(),
-        status: "ok", connected_at: now, refreshed_at: now,
+        user_id: st.user_id, ig_user_id: String(pg.instagram_business_account.id), page_id: String(pg.id),
+        username: pg.instagram_business_account.username || "", token: await seal(pg.access_token),
+        expires_at: null, status: "ok", connected_at: now, refreshed_at: now,
       });
       return back(error ? "error" : "connected");
     } catch (_) { return back("error"); }
@@ -129,32 +133,18 @@ Deno.serve(async (req: Request) => {
   }
   async function dead(uid: string) { await admin.from("ig_accounts").update({ status: "expired" }).eq("user_id", uid); }
 
-  // Keep a token alive: refresh once it's a day old and has under 30 days left
-  async function keepAlive(uid: string, row: any, token: string): Promise<string> {
-    const left = Date.parse(row.expires_at || 0) - Date.now(), age = Date.now() - Date.parse(row.refreshed_at || 0);
-    if (age < 864e5 || left > 30 * 864e5) return token;
-    const r = await ig("https://graph.instagram.com/refresh_access_token", token, { grant_type: "ig_refresh_token" });
-    if (!r?.access_token) return token;
-    await admin.from("ig_accounts").update({
-      token: await seal(r.access_token), refreshed_at: new Date().toISOString(),
-      expires_at: new Date(Date.now() + (+r.expires_in || 5184000) * 1000).toISOString(),
-    }).eq("user_id", uid);
-    return r.access_token;
-  }
-
   // Log new posts whose caption has this person's auto-log phrase / word
   async function syncUser(uid: string): Promise<number> {
     const t = await tokenFor(uid); if (!t) return 0;
-    let token = t.token;
+    const token = t.token, igId = t.row.ig_user_id;
     try {
-      token = await keepAlive(uid, t.row, token);
       const { data: u } = await admin.auth.admin.getUserById(uid);
       const al = (u?.user?.user_metadata as any)?.autolog;
       const phrase = norm(al?.phrase || "");
       await admin.from("ig_accounts").update({ checked_at: new Date().toISOString() }).eq("user_id", uid);
       if (!phrase) return 0;
       const since = Date.parse(al?.since || "") || 0;
-      const media = (await ig("me/media", token, { fields: MEDIA_FIELDS, limit: "50" }))?.data || [];
+      const media = (await ig(`${igId}/media`, token, { fields: MEDIA_FIELDS, limit: "50" }))?.data || [];
       const hits = media.filter((m: any) => m.caption && norm(m.caption).includes(phrase) && Date.parse(m.timestamp) >= since);
       if (!hits.length) return 0;
       const { data: mine } = await admin.from("videos").select("data").eq("owner", uid);
@@ -200,8 +190,8 @@ Deno.serve(async (req: Request) => {
       await admin.from("ig_states").delete().lt("created_at", new Date(Date.now() - 3600e3).toISOString());
       const { error } = await admin.from("ig_states").insert({ state, user_id: who.id });
       if (error) return json({ error: error.message }, 500);
-      const u = new URL("https://www.instagram.com/oauth/authorize");
-      Object.entries({ client_id: env("IG_APP_ID"), redirect_uri: SELF_URL, response_type: "code", scope: SCOPES, state })
+      const u = new URL("https://www.facebook.com/v25.0/dialog/oauth");
+      Object.entries({ client_id: env("META_APP_ID"), redirect_uri: SELF_URL, config_id: env("META_CONFIG_ID"), response_type: "code", state })
         .forEach(([k, v]) => u.searchParams.set(k, v));
       return json({ url: u.toString() });
     }
@@ -222,10 +212,11 @@ Deno.serve(async (req: Request) => {
       const t = await tokenFor(v.owner); if (!t) return json({});
       const code = codeOf(v.data?.link || ""); if (!code) return json({});
       try {
-        let next = "me/media", found: any = null;
+        const first = `${t.row.ig_user_id}/media`;
+        let next = first, found: any = null;
         const q: Record<string, string> = { fields: MEDIA_FIELDS, limit: "100" };
         for (let page = 0; page < 3 && next && !found; page++) {
-          const j = await ig(next, t.token, next === "me/media" ? q : {});
+          const j = await ig(next, next === first ? t.token : "", next === first ? q : {});
           found = (j?.data || []).find((m: any) => codeOf(m.permalink) === code) || null;
           next = j?.paging?.next || "";
         }

@@ -1,11 +1,13 @@
 -- Panel Tracker: Instagram connection + auto-log
 -- Run this when we switch Instagram on (after the Meta app is made). Safe to run more than once.
+-- People connect with Facebook sign-in; their Instagram professional account must be linked to a Facebook Page.
 
 -- 1. Saved Instagram connections. Tokens are encrypted by the function.
 --    Locked: nobody's app can read or change this table; only the instagram function can.
 create table if not exists public.ig_accounts (
   user_id uuid primary key references auth.users(id) on delete cascade,
   ig_user_id text,
+  page_id text,
   username text,
   token text not null,
   expires_at timestamptz,
@@ -14,10 +16,11 @@ create table if not exists public.ig_accounts (
   refreshed_at timestamptz default now(),
   checked_at timestamptz
 );
+alter table public.ig_accounts add column if not exists page_id text;
 alter table public.ig_accounts enable row level security;
 revoke all on public.ig_accounts from anon, authenticated;
 
--- One-time codes used while someone is on Instagram's sign-in screen (also locked)
+-- One-time codes used while someone is on Facebook's sign-in screen (also locked)
 create table if not exists public.ig_states (
   state text primary key,
   user_id uuid not null references auth.users(id) on delete cascade,

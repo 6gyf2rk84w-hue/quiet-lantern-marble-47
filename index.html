@@ -835,7 +835,7 @@ async function igCall(body){
 }
 async function igConnect(){
   if(!IG.sql){toast('Connect Instagram is coming soon.');return}
-  toast('Opening Instagram...',true);
+  toast('Opening Facebook...',true);
   var r=await igCall({action:'connect'});
   if(r.url){location.href=r.url;return}
   toast(/not_configured|not found|Failed to send|404/i.test(r.error||'')?'Connect Instagram is coming soon.':'Could not open Instagram: '+(r.error||'try again'));
@@ -891,7 +891,7 @@ function setupSteps(){
   var a=IG.acct;
   return [
     {k:'deal',t:'Set your monthly deal',done:!!dealFor(monthNow()),sub:'Pay per video, agency cut and videos per month'},
-    {k:'ig',t:a&&a.status!=='ok'?'Reconnect Instagram':'Connect Instagram',done:!IG.sql||igOk(),soon:!IG.sql,sub:!IG.sql?'Coming soon':igOk()?'@'+(a.username||'connected'):'So your posts show their previews and numbers'},
+    {k:'ig',t:a&&a.status!=='ok'?'Reconnect Instagram':'Connect Instagram',done:!IG.sql||igOk(),soon:!IG.sql,sub:!IG.sql?'Coming soon':igOk()?'@'+(a.username||'connected'):'Sign in with Facebook to link your Instagram'},
     {k:'phrase',t:'Auto-log phrase / word',done:!!phraseNow(),sub:phraseNow()?'“'+phraseNow()+'”':'Posts with it in the caption log themselves'}];
 }
 function setupShown(){if(!user||!canVideos())return false;return setupSteps().some(function(s){return !s.done})}
@@ -913,6 +913,7 @@ function igReturn(){
   var k=m[1];
   if(k==='connected'){toast('Instagram connected.',true);igSync(true)}
   else if(k==='cancelled')toast('Instagram connect was cancelled.');
+  else if(k==='nopage')toast('No Instagram found. Make it a Creator or Business account linked to a Facebook Page you manage, then try again.');
   else toast('Couldn’t connect Instagram. Try again.');
 }
 
@@ -938,7 +939,7 @@ async function invite(email,role){
 var APP_URL='https://6gyf2rk84w-hue.github.io/quiet-lantern-marble-47/';
 function inviteText(inv){
   var head='Here’s your app:\n'+APP_URL+'\n\nEmail: '+inv.email+'\n\nPassword: '+inv.password+'\n\n';
-  if(IG.sql&&inv.role!=='viewer')return head+'1. Copy and paste this link into Safari, or press and hold it and tap Open in Safari:\nhttps://www.instagram.com/accounts/manage_access/\n\n2. Log into your real Instagram, tap Tester Invites, then tap Accept.\n\n3. Open the app link in Safari, tap Share, then Add to Home Screen.\n\n4. Open the app from your home screen, sign in, and tap Connect Instagram.';
+  if(IG.sql&&inv.role!=='viewer')return head+'1. Copy and paste this link into Safari, or press and hold it and tap Open in Safari:\nhttps://developers.facebook.com/requests/\n\n2. Log into your real Facebook, then tap Confirm on the tester invite.\n\n3. Make sure your Instagram is a Creator or Business account linked to a Facebook Page you manage.\n\n4. Open the app link in Safari, tap Share, then Add to Home Screen.\n\n5. Open the app from your home screen, sign in, and tap Connect Instagram.';
   return head+'1. Open the app link in Safari, tap Share, then Add to Home Screen.\n\n2. Open the app from your home screen and sign in.';
 }
 function showInvite(inv){
