@@ -331,7 +331,7 @@ async function memberRow(){if(!user)return null;var r=await sb.from('members').s
 async function stillMember(){var m=await memberRow();if(!m)return false;if(m.unk)return true;var nr=m.role||'viewer';if(nr!==role)setRole(nr);return true}
 async function setRole(nr){role=nr;isViewer=!canPanels();if(isViewer){editing=false;if(scr!=='orders')setScreen('orders')}applyRole();render();await loadIg();mountOrders();paintSetup()}
 function applyRole(){var p=canPanels();document.getElementById('pen').style.display=p?'flex':'none';document.getElementById('credsBtn').style.display=p?'block':'none';document.getElementById('modsBtn').style.display=isAdmin?'block':'none';document.getElementById('igBtn').style.display=canVideos()?'block':'none';document.querySelectorAll('.dots').forEach(function(d){d.style.display=p?'flex':'none'})}
-function kick(msg){document.getElementById('cpage').classList.remove('on');document.getElementById('mpage').classList.remove('on');if(scr!=='orders')setScreen('orders');role='viewer';MEM=[];isViewer=true;applyRole();var u=user;user=null;isAdmin=false;S={nodes:[],orders:[]};path=[];editing=false;closeSheet();document.getElementById('main').innerHTML='';if(otApi){otApi.destroy();otApi=null}var se=document.getElementById('setup');se.innerHTML='';se.style.display='none';sb.auth.signOut().catch(function(){});document.getElementById('login').style.display='flex';document.getElementById('lmsg').textContent=msg||''}
+function kick(msg){document.getElementById('cpage').classList.remove('on');document.getElementById('mpage').classList.remove('on');if(scr!=='orders')setScreen('orders');role='viewer';MEM=[];isViewer=true;applyRole();var u=user;user=null;isAdmin=false;S={nodes:[],orders:[]};path=[];editing=false;closeSheet();document.getElementById('main').innerHTML='';if(otApi){otApi.destroy();otApi=null}var se=document.getElementById('setup');se.innerHTML='';se.style.display='none';document.getElementById('otroot').style.display='';sb.auth.signOut().catch(function(){});document.getElementById('login').style.display='flex';document.getElementById('lmsg').textContent=msg||''}
 function refresh(){if(!user||dragging||document.hidden||document.getElementById('veil').style.display==='flex')return;q=q.then(async function(){if(!isAdmin&&!(await stillMember())){kick('Your access to this app has been removed.');return}if(canPanels()){await load();render()}if(isAdmin)await loadMem()}).catch(function(){})}
 async function start(u){
   user=u;document.getElementById('login').style.display='none';
@@ -897,7 +897,9 @@ function setupSteps(){
 function setupShown(){if(!user||!canVideos())return false;return setupSteps().some(function(s){return !s.done})}
 function paintSetup(){
   var el=document.getElementById('setup');if(!el)return;
-  if(!setupShown()){el.innerHTML='';el.style.display='none';if(otApi)otApi.redraw();return}
+  var ot=document.getElementById('otroot');
+  if(!setupShown()){el.innerHTML='';el.style.display='none';ot.style.display='';if(otApi)otApi.redraw();return}
+  ot.style.display='none';
   var st=setupSteps(),n=st.filter(function(s){return s.done}).length;
   el.style.display='block';
   el.innerHTML='<div class="sbox"><div class="shd"><b>Get set up</b><span>'+n+' of '+st.length+' done</span></div>'+st.map(function(s,i){return '<button class="sstep'+(s.done&&!s.soon?' done':'')+(s.soon?' soon':'')+'" data-step="'+s.k+'"><span class="snum">'+(s.done&&!s.soon?'✓':i+1)+'</span><span class="stx2"><b>'+esc(s.t)+'</b><small>'+esc(s.sub)+'</small></span>'+(s.soon?'':'<span class="chev">›</span>')+'</button>'}).join('')+'</div>';

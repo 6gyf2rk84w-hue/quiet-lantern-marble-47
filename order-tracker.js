@@ -74,7 +74,7 @@
     const prices = opt.prices || null;
     const rates = Object.assign({}, DEF_RATES, opt.rates || {});
     const L = Object.assign({ order: "order", orders: "orders" }, opt.labels || {});
-    const st = { orders: [], month: monthKey(Date.now()), edit: null, open: null, ask: null, busy: false, arch: null, who: null, shown: {} };
+    const st = { orders: [], month: monthKey(Date.now()), edit: null, open: null, ask: null, busy: false, arch: null, who: null, shown: {}, adding: false };
     const vis = () => st.who ? st.orders.filter(o => o._by === st.who) : st.orders;
     const planText = p => opt.planLabel ? opt.planLabel(p) : (p.site || p.name || "");
     root.classList.add("ot");
@@ -196,15 +196,15 @@
         ${showDeal() ? dealCard(cur) : ""}
         <div class="ot-grand"><span class="lb">Grand total · ${monthName(st.month)}</span><b>${usd(total)}</b></div>
         <div class="ot-key"><span>🟢 In progress</span><span>🟡 Stalling</span><span>🔴 Needs review</span></div>`;
-      h += live.length ? live.map(o => card(o, mine.indexOf(o) + 1, now)).join("") : (st.month === cur && !RO && !fin.length
-        ? `<button class="ot-big" type="button" data-ot-focus="1"><i aria-hidden="true">+</i>Add an ${esc(L.order === "video" ? "order" : L.order)}</button>`
-        : `<div class="ot-empty">No ${esc(L.orders)} yet for ${monthName(st.month)}.</div>`);
-      if (st.month === cur && !RO) h += `<form class="ot-log" data-ot-log="1" autocomplete="off"><div class="ot-log-h">${dl && left ? `📌 <b>${left}</b> left this month` : dl ? `🔥 Deal complete · log extras here` : `Log a posted ${esc(L.order)}`}</div>
-        <label class="ot-lbl">Title<input class="ot-in" name="title" placeholder="Title your video"></label><label class="ot-lbl">Link<input class="ot-in" name="link" inputmode="url" autocapitalize="off" placeholder="${esc(opt.linkPlaceholder || "Instagram post link")}"></label>
-        <button class="ot-btn ot-logbtn" type="submit"><i aria-hidden="true">+</i>Log ${esc(L.order)}</button></form>`;
+      const canAdd = st.month === cur && !RO;
+      h += live.length ? live.map(o => card(o, mine.indexOf(o) + 1, now)).join("") : (canAdd ? "" : `<div class="ot-empty">No ${esc(L.orders)} yet for ${monthName(st.month)}.</div>`);
+      if (canAdd) h += `<button class="ot-big${live.length || fin.length ? " small" : ""}" type="button" data-ot-add="1"><i aria-hidden="true">+</i>Add an order${dl ? `<small>${left ? `📌 ${left} left this month` : "🔥 Deal complete"}</small>` : ""}</button>`;
       if (fin.length) h += `<div class="ot-sec"><div class="ot-sec-h">Completed</div>${fin.map(o => `<button class="ot-arow" type="button" data-ot-open="${esc(o.id)}">${esc(o.title || L.order + " " + (mine.indexOf(o) + 1))}<span>${fmt(real(o, "views"))} views ${st.open === o.id ? "▾" : "›"}</span></button>${st.open === o.id ? card(o, mine.indexOf(o) + 1, now) : ""}`).join("")}</div>`;
       if (arch.length) h += `<div class="ot-sec"><div class="ot-sec-h">Archive</div>${arch.map(m => { const a = vis().filter(o => o.month === m);
         return `<button class="ot-arow" type="button" data-ot-arch="${m}">${monthName(m)}<span>${fmt(a.reduce((t, o) => t + real(o, "views"), 0))} views · ${a.length} ${a.length === 1 ? esc(L.order) : esc(L.orders)}</span></button>${st.arch === m ? a.map((o, i) => card(o, i + 1, now)).join("") : ""}`; }).join("")}</div>`;
+      if (st.adding && canAdd) h += `<div class="ot-pop" data-ot-x="1"><div><form class="ot-addf" data-ot-log="1" autocomplete="off"><b class="ot-addh">Add an order</b>
+        <label class="ot-lbl">Title<input class="ot-in" name="title" placeholder="Title your video"></label><label class="ot-lbl">Link<input class="ot-in" name="link" inputmode="url" autocapitalize="off" placeholder="${esc(opt.linkPlaceholder || "Instagram post link")}"></label>
+        <div class="ot-row"><button class="ot-btn" type="submit">Add order</button><button class="ot-btn ghost" type="button" data-ot-x="1">Cancel</button></div></form></div></div>`;
       if (st.ask) { const [id, s] = st.ask, o = st.orders.find(x => x.id === id), lb = (STATS.find(x => x[0] === s) || [])[1];
         h += `<div class="ot-pop" data-ot-x="1"><div><b>${esc(lb)}</b><p>${fmt(real(o, s))} of ${fmt(goal(o, s))} (${pct(o, s)}%). Mark this goal complete?</p>
           <div class="ot-row"><button class="ot-btn" type="button" data-ot-mark="1">Mark complete</button><button class="ot-btn ghost" type="button" data-ot-x="1">Cancel</button></div></div></div>`; }
@@ -214,10 +214,11 @@
 
     // ---- taps -----------------------------------------------------------------
     root.addEventListener("click", async e => {
-      const b = e.target.closest("[data-ot-m],[data-ot-ref],[data-ot-edit],[data-ot-save],[data-ot-del],[data-ot-copy],[data-ot-bot],[data-ot-mark],[data-ot-x],[data-ot-open],[data-ot-arch],[data-ot-pick],[data-ot-focus],[data-ot-who],[data-ot-deal]");
+      const b = e.target.closest("[data-ot-m],[data-ot-ref],[data-ot-edit],[data-ot-save],[data-ot-del],[data-ot-copy],[data-ot-bot],[data-ot-mark],[data-ot-x],[data-ot-open],[data-ot-arch],[data-ot-pick],[data-ot-focus],[data-ot-who],[data-ot-deal],[data-ot-add]");
       if (!b) return; const d = b.dataset;
       if (d.otX && e.target !== b) return;
       if (d.otPick && e.target.closest("[data-ot-bot]")) return;
+      if (d.otAdd) { st.adding = true; draw(); const f = root.querySelector(".ot-addf [name=title]"); if (f) f.focus(); return; }
       if (d.otDeal) { if (opt.onDeal && !RO) opt.onDeal(); }
       else if (d.otWho !== undefined) { st.who = d.otWho || null; st.open = null; st.arch = null; draw(); }
       else if (d.otM) { st.month = d.otM; draw(); }
@@ -237,7 +238,7 @@
         if (S === "idle" || RO) { b.animate([{ transform: "scale(.8)" }, { transform: "scale(1.12)" }, { transform: "scale(1)" }], 380); return; }
         st.ask = [id, s]; draw(); }
       else if (d.otMark) { const [id, s] = st.ask, o = st.orders.find(x => x.id === id); bar(o, s).done = Date.now(); st.ask = null; await save(); draw(); }
-      else if (d.otX) { st.ask = null; draw(); }
+      else if (d.otX) { st.ask = null; st.adding = false; draw(); }
       else if (d.otOpen) { st.open = st.open === d.otOpen ? null : d.otOpen; draw(); }
       else if (d.otArch) { st.arch = st.arch === d.otArch ? null : d.otArch; draw(); }
       else if (d.otFocus) { const f = root.querySelector(".ot-log [name=title]"); if (f) { f.scrollIntoView({ behavior: "smooth", block: "center" }); f.focus(); } }
@@ -253,7 +254,7 @@
       if (!link) { toast("Paste the post link"); return; }
       const o = { id: uid(), title, link, postedAt: Date.now(), month: monthKey(Date.now()), goals: {}, real: {}, bars: {} };
       if (opt.me) o._by = opt.me; if (st.who && st.who !== o._by) st.who = null;
-      st.orders.push(o); await save(); draw(); toast("Logged");
+      st.adding = false; st.orders.push(o); await save(); draw(); toast("Added");
       if (opt.onLogged && !RO) opt.onLogged(o, (s, res) => setStat(o, s, res));
       if (preview) { try { const r = await preview.fetch(link, o); if (r) { applyReal(o, r, Date.now()); await save(); draw(); } } catch (er) {} }
     });
@@ -262,8 +263,8 @@
     store.load().then(o => { st.orders = Array.isArray(o) ? o : []; draw(); refresh(true); });
     const every = (opt.refreshEveryMin || 10) * 60e3;
     const tick = setInterval(() => { if (!document.hidden) refresh(true); }, every);
-    const redraw = setInterval(() => { if (!document.hidden && !root.querySelector("input:focus")) draw(); }, 60e3); // stall colors move with time
-    async function reload() { if (st.edit || st.ask || root.querySelector("input:focus")) return;
+    const redraw = setInterval(() => { if (!document.hidden && !st.adding && !root.querySelector("input:focus")) draw(); }, 60e3); // stall colors move with time
+    async function reload() { if (st.edit || st.ask || st.adding || root.querySelector("input:focus")) return;
       try { const o = await store.load(); if (Array.isArray(o)) { st.orders = o; draw(); } } catch (e) {} }
     return { refresh: () => refresh(false), reload, redraw: () => draw(), destroy() { clearInterval(tick); clearInterval(redraw); root.innerHTML = ""; root.classList.remove("ot"); }, get orders() { return st.orders; } };
   }
