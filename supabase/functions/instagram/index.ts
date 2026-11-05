@@ -1,23 +1,23 @@
 // Panel Tracker: "instagram" function.
-// - Connect Instagram: each person signs in with Facebook (Meta's "Unified login" for new apps) and picks
-//   the Facebook Page their Instagram professional account is linked to. Read-only permissions only.
+// - Connect Instagram: Meta's "Unified login" (new apps). People choose "Log in with Instagram" on Meta's
+//   sign-in screen. No Facebook Page needed; the Instagram must be a Creator or Business account.
+//   This follows a setup proven on a live account (reels and posts, views/shares/saves/reposts).
 // - Previews: thumbnails and live numbers for a video, read with the video owner's own connection.
 // - Auto-log: posts whose caption has the person's auto-log phrase / word show up as their next video.
 // Tokens are encrypted and stay in Supabase. They are never sent to anyone's phone.
 //
 // Settings (Supabase → Edge Functions → Secrets):
 //   META_APP_ID, META_APP_SECRET   App settings → Basic in this app's own Meta app
-//   META_CONFIG_ID                 the Facebook Login for Business configuration (User access token,
-//                                  permissions: instagram_basic, instagram_manage_insights, pages_show_list,
-//                                  pages_read_engagement)
+//   META_CONFIG_ID                 the Unified login configuration; it must include instagram_manage_insights
+//                                  (people who connected before it was added must reconnect)
 //   IG_TOKEN_KEY                   any long random text; used to encrypt saved tokens
 //   CRON_SECRET                any long random text; lets the 15-minute schedule run auto-log for everyone
 //   APP_URL (optional)         where to send people back to after connecting
-// Deploy with "Verify JWT" turned OFF: Facebook sends people back here without a Supabase login.
+// Deploy with "Verify JWT" turned OFF: Meta sends people back here without a Supabase login.
 // The function checks the login itself for everything else.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const GRAPH = "https://graph.facebook.com/v25.0";
+const GRAPH = "https://graph.facebook.com"; // no version: Meta uses the app's default, as in the proven setup
 const env = (k: string) => Deno.env.get(k) || "";
 const APP_URL = env("APP_URL") || "https://6gyf2rk84w-hue.github.io/quiet-lantern-marble-47/";
 const SELF_URL = `${env("SUPABASE_URL")}/functions/v1/instagram`;
@@ -63,18 +63,38 @@ const codeOf = (link: string) => (String(link || "").match(/\/(?:p|reel|reels|tv
 const cleanLink = (link: string) => { const c = codeOf(link); return c ? `https://www.instagram.com/p/${c}/` : String(link || "").trim(); };
 const norm = (s: string) => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
 const monthOf = (t: number) => new Date(t).toISOString().slice(0, 7);
-const MEDIA_FIELDS = "id,caption,permalink,timestamp,media_type,thumbnail_url,media_url,like_count,comments_count";
+const MEDIA_FIELDS = "id,caption,media_product_type,media_type,timestamp,permalink,shortcode,like_count,comments_count,media_url";
+const ONE_FIELDS = "id,media_product_type,media_type,permalink,shortcode,like_count,comments_count,thumbnail_url,media_url";
+const INSIGHTS = ["views", "shares", "saved", "reposts"]; // asked in one call; works for REELS and FEED
+const KEY: Record<string, string> = { views: "views", shares: "shares", saved: "saves", reposts: "reposts" };
 
-async function insights(id: string, token: string) {
+class NoInsights extends Error {}
+function readMetrics(j: any, out: Record<string, number>) {
+  for (const d of j?.data || []) {
+    const v = d?.values?.[0]?.value ?? d?.total_value?.value;
+    if (d?.name && KEY[d.name] && v != null) out[KEY[d.name]] = +v;
+  }
+}
+// Views, shares, saves and reposts for one post. One call; if Meta refuses the list, ask one at a time.
+// Throws NoInsights when the connection lacks instagram_manage_insights (#10).
+async function insights(id: string, token: string): Promise<Record<string, number>> {
   const out: Record<string, number> = {};
-  for (const [k, metric] of [["views", "views"], ["shares", "shares"], ["saves", "saved"], ["reposts", "reposts"]]) {
-    try {
-      const j = await ig(`${id}/insights`, token, { metric });
-      const v = j?.data?.[0]?.values?.[0]?.value ?? j?.data?.[0]?.total_value?.value;
-      if (v != null) out[k] = +v;
-    } catch (_) { /* Instagram refuses some metrics for some posts; skip those */ }
+  try {
+    readMetrics(await ig(`${id}/insights`, token, { metric: INSIGHTS.join(",") }), out);
+    return out;
+  } catch (e) {
+    if (e instanceof IgError && e.code === 10) throw new NoInsights();
+    if (e instanceof IgError && e.code === 190) throw e;
+  }
+  for (const metric of INSIGHTS) {
+    try { readMetrics(await ig(`${id}/insights`, token, { metric }), out); }
+    catch (e) { if (e instanceof IgError && (e.code === 10 || e.code === 190)) throw e.code === 10 ? new NoInsights() : e; }
   }
   return out;
+}
+async function cover(id: string, token: string): Promise<string | null> {
+  try { const m = await ig(id, token, { fields: "media_type,thumbnail_url,media_url" }); return m?.thumbnail_url || m?.media_url || null; }
+  catch (_) { return null; }
 }
 
 Deno.serve(async (req: Request) => {
@@ -86,27 +106,41 @@ Deno.serve(async (req: Request) => {
   // ---------- Facebook sends people back here after they tap Continue ----------
   if (req.method === "GET") {
     if (url.searchParams.get("error")) return back("cancelled");
-    const code = url.searchParams.get("code") || "";
+    const code = (url.searchParams.get("code") || "").replace(/#_$/, "");
     const state = url.searchParams.get("state") || "";
     if (!code || !state || !configured) return back("error");
     try {
       const { data: st } = await admin.from("ig_states").select("*").eq("state", state).maybeSingle();
       await admin.from("ig_states").delete().eq("state", state);
       if (!st || Date.now() - Date.parse(st.created_at) > 15 * 60e3) return back("expired");
-      // code → user token → 60-day user token
+      // code → token (a system-user token that never expires, so nothing to refresh)
       const t1 = await ig(`${GRAPH}/oauth/access_token`, "", { client_id: env("META_APP_ID"), client_secret: env("META_APP_SECRET"), redirect_uri: SELF_URL, code });
-      const t2 = await ig(`${GRAPH}/oauth/access_token`, "", { grant_type: "fb_exchange_token", client_id: env("META_APP_ID"), client_secret: env("META_APP_SECRET"), fb_exchange_token: t1.access_token });
-      // Their Facebook Pages → the one with an Instagram professional account. A Page token made
-      // from a 60-day user token doesn't expire, so no refreshing is needed.
-      const pages = (await ig("me/accounts", t2.access_token || t1.access_token, { fields: "id,name,access_token,instagram_business_account{id,username}", limit: "100" }))?.data || [];
-      const pg = pages.find((p: any) => p?.instagram_business_account?.id && p.access_token);
-      if (!pg) return back("nopage");
+      const token = String(t1?.access_token || "");
+      if (!token) return back("error");
+      // Which Instagram account did they pick? (a) assigned accounts, (b) a Page's linked account
+      let acct: any = null;
+      try { acct = (await ig("me/assigned_instagram_accounts", token, { fields: "id,username,name" }))?.data?.[0] || null; } catch (_) { /* try the next way */ }
+      if (!acct) {
+        try {
+          const pages = (await ig("me/accounts", token, { fields: "instagram_business_account{id,username,name}", limit: "100" }))?.data || [];
+          acct = pages.map((p: any) => p?.instagram_business_account).find((a: any) => a?.id) || null;
+        } catch (_) { /* none */ }
+      }
+      if (!acct?.id) return back("noig");
+      // Did the insights permission come through? (old sign-ins don't pick it up; they must reconnect)
+      let insightsOk = true;
+      try {
+        const dbg = await ig(`${GRAPH}/debug_token`, "", { input_token: token, access_token: `${env("META_APP_ID")}|${env("META_APP_SECRET")}` });
+        const scopes: string[] = dbg?.data?.scopes || [];
+        if (scopes.length && !scopes.includes("instagram_manage_insights")) insightsOk = false;
+      } catch (_) { /* can't tell; the first numbers request will show it */ }
       const now = new Date().toISOString();
       const { error } = await admin.from("ig_accounts").upsert({
-        user_id: st.user_id, ig_user_id: String(pg.instagram_business_account.id), page_id: String(pg.id),
-        username: pg.instagram_business_account.username || "", token: await seal(pg.access_token),
-        expires_at: null, status: "ok", connected_at: now, refreshed_at: now,
+        user_id: st.user_id, ig_user_id: String(acct.id), page_id: null,
+        username: acct.username || acct.name || "", token: await seal(token),
+        expires_at: null, status: insightsOk ? "ok" : "limited", connected_at: now, refreshed_at: now,
       });
+      if (!error && !insightsOk) return back("limited");
       return back(error ? "error" : "connected");
     } catch (_) { return back("error"); }
   }
@@ -128,10 +162,16 @@ Deno.serve(async (req: Request) => {
 
   async function tokenFor(uid: string): Promise<{ token: string; row: any } | null> {
     const { data: row } = await admin.from("ig_accounts").select("*").eq("user_id", uid).maybeSingle();
-    if (!row || row.status !== "ok") return null;
+    if (!row || (row.status !== "ok" && row.status !== "limited")) return null;
     try { return { token: await open(row.token), row }; } catch (_) { return null; }
   }
   async function dead(uid: string) { await admin.from("ig_accounts").update({ status: "expired" }).eq("user_id", uid); }
+  async function limited(uid: string) { await admin.from("ig_accounts").update({ status: "limited" }).eq("user_id", uid).eq("status", "ok"); }
+  // Numbers for one post; a missing insights permission marks the connection so the app can say "reconnect"
+  async function numbers(uid: string, id: string, token: string): Promise<Record<string, number>> {
+    try { return await insights(id, token); }
+    catch (e) { if (e instanceof NoInsights) { await limited(uid); return {}; } throw e; }
+  }
 
   // Log new posts whose caption has this person's auto-log phrase / word
   async function syncUser(uid: string): Promise<number> {
@@ -151,9 +191,9 @@ Deno.serve(async (req: Request) => {
       const have = new Set((mine || []).map((v: any) => codeOf(v?.data?.link || "")).filter(Boolean));
       let n = 0;
       for (const m of hits.reverse()) {
-        const code = codeOf(m.permalink); if (!code || have.has(code)) continue;
+        const code = m.shortcode || codeOf(m.permalink); if (!code || have.has(code)) continue;
         const ts = Date.parse(m.timestamp) || Date.now(), now = Date.now();
-        const real: Record<string, number> = { ...(await insights(m.id, token)) };
+        const real: Record<string, number> = { ...(await numbers(uid, m.id, token)) };
         if (m.like_count != null) real.likes = +m.like_count;
         if (m.comments_count != null) real.comments = +m.comments_count;
         const bars: Record<string, { movedAt: number }> = {};
@@ -163,7 +203,7 @@ Deno.serve(async (req: Request) => {
         const { error } = await admin.from("videos").insert({
           id: "ig" + crypto.randomUUID().replace(/-/g, "").slice(0, 14), owner: uid,
           data: { title, link: cleanLink(m.permalink), postedAt: ts, month: monthOf(ts), goals: {}, real, bars,
-                  thumb: m.thumbnail_url || m.media_url || null, checkedAt: now, auto: true },
+                  thumb: await cover(m.id, token), igId: String(m.id), checkedAt: now, auto: true },
         });
         if (!error) { have.add(code); n++; }
       }
@@ -177,7 +217,7 @@ Deno.serve(async (req: Request) => {
   try {
     if (action === "sync") {
       if (cron) {
-        const { data: rows } = await admin.from("ig_accounts").select("user_id").eq("status", "ok");
+        const { data: rows } = await admin.from("ig_accounts").select("user_id").in("status", ["ok", "limited"]);
         let n = 0; for (const r of rows || []) n += await syncUser(r.user_id);
         return json({ logged: n });
       }
@@ -190,8 +230,8 @@ Deno.serve(async (req: Request) => {
       await admin.from("ig_states").delete().lt("created_at", new Date(Date.now() - 3600e3).toISOString());
       const { error } = await admin.from("ig_states").insert({ state, user_id: who.id });
       if (error) return json({ error: error.message }, 500);
-      const u = new URL("https://www.facebook.com/v25.0/dialog/oauth");
-      Object.entries({ client_id: env("META_APP_ID"), redirect_uri: SELF_URL, config_id: env("META_CONFIG_ID"), response_type: "code", state })
+      const u = new URL("https://www.facebook.com/dialog/oauth");
+      Object.entries({ client_id: env("META_APP_ID"), config_id: env("META_CONFIG_ID"), override_default_response_type: "true", redirect_uri: SELF_URL, response_type: "code", state, prompt: "login" })
         .forEach(([k, v]) => u.searchParams.set(k, v));
       return json({ url: u.toString() });
     }
@@ -212,16 +252,20 @@ Deno.serve(async (req: Request) => {
       const t = await tokenFor(v.owner); if (!t) return json({});
       const code = codeOf(v.data?.link || ""); if (!code) return json({});
       try {
-        const first = `${t.row.ig_user_id}/media`;
-        let next = first, found: any = null;
-        const q: Record<string, string> = { fields: MEDIA_FIELDS, limit: "100" };
-        for (let page = 0; page < 3 && next && !found; page++) {
-          const j = await ig(next, next === first ? t.token : "", next === first ? q : {});
-          found = (j?.data || []).find((m: any) => codeOf(m.permalink) === code) || null;
-          next = j?.paging?.next || "";
+        let found: any = null;
+        if (v.data?.igId) { try { found = await ig(String(v.data.igId), t.token, { fields: ONE_FIELDS }); } catch (e) { if (e instanceof IgError && e.code === 190) throw e; } }
+        if (!found?.id) {
+          const first = `${t.row.ig_user_id}/media`;
+          let next = first;
+          for (let page = 0; page < 3 && next && !found; page++) {
+            const j = await ig(next, next === first ? t.token : "", next === first ? { fields: MEDIA_FIELDS, limit: "100" } : {});
+            found = (j?.data || []).find((m: any) => (m.shortcode || codeOf(m.permalink)) === code) || null;
+            next = j?.paging?.next || "";
+          }
+          if (found) found = { ...found, thumbnail_url: undefined };
         }
-        if (!found) return json({});
-        const out: Record<string, unknown> = { thumb: found.thumbnail_url || found.media_url || null, ...(await insights(found.id, t.token)) };
+        if (!found?.id) return json({});
+        const out: Record<string, unknown> = { igId: String(found.id), thumb: found.thumbnail_url || (await cover(found.id, t.token)), ...(await numbers(v.owner, found.id, t.token)) };
         if (found.like_count != null) out.likes = +found.like_count;
         if (found.comments_count != null) out.comments = +found.comments_count;
         return json(out);

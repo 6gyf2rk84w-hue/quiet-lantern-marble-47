@@ -105,6 +105,7 @@
 
     // new numbers came in → remember when each stat last moved
     function applyReal(o, r, now) {
+      if (r.igId) o.igId = String(r.igId);
       o.real = o.real || {};
       STATS.forEach(([s]) => { if (r[s] == null) return; const v = +r[s] || 0, b = bar(o, s);
         if (v > (+o.real[s] || 0) && o.real[s] != null) b.movedAt = now;

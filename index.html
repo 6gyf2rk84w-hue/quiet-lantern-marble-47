@@ -346,8 +346,7 @@ async function start(u){
   await loadIg();
   mountOrders();
   paintSetup();
-  igReturn();
-  igSync(true);
+  if(!igReturn())igSync(true);
   if(canPanels())await load();
   if(u.user_metadata&&u.user_metadata.must_change)setTimeout(function(){newPassword(true)},200);
   if(!S.nodes.length&&isAdmin){
@@ -824,7 +823,7 @@ async function loadIg(){
   if(!canVideos()){IG={sql:false,acct:null};return}
   try{var r=await sb.rpc('instagram_status');if(r.error){IG={sql:false,acct:null};return}IG={sql:true,acct:(r.data&&r.data[0])||null}}catch(e){IG={sql:false,acct:null}}
 }
-function igOk(){return !!(IG.acct&&IG.acct.status==='ok')}
+function igOk(){return !!(IG.acct&&(IG.acct.status==='ok'||IG.acct.status==='limited'))}
 function phraseNow(){var a=user&&user.user_metadata&&user.user_metadata.autolog;return a&&a.phrase?a.phrase:''}
 async function igCall(body){
   try{
@@ -835,7 +834,7 @@ async function igCall(body){
 }
 async function igConnect(){
   if(!IG.sql){toast('Connect Instagram is coming soon.');return}
-  toast('Opening Facebook...',true);
+  toast('Opening Meta sign-in. Choose Log in with Instagram.',true);
   var r=await igCall({action:'connect'});
   if(r.url){location.href=r.url;return}
   toast(/not_configured|not found|Failed to send|404/i.test(r.error||'')?'Connect Instagram is coming soon.':'Could not open Instagram: '+(r.error||'try again'));
@@ -880,8 +879,8 @@ function editPhrase(){
 function openIgSettings(){
   document.getElementById('menu').classList.remove('on');
   var a=IG.acct,ph=phraseNow();
-  var ig=!IG.sql?'<span class="stx">Coming soon</span>':a?(a.status==='ok'?'<span class="stx ok">@'+esc(a.username||'connected')+' connected</span>':'<span class="stx bad">Needs reconnecting</span>'):'<span class="stx">Not connected</span>';
-  openSheet('<h3>Instagram &amp; auto-log</h3><div class="srow"><div><b>Instagram</b>'+ig+'</div>'+(IG.sql?(a&&a.status==='ok'?'<button class="sbtn" id="igd">Disconnect</button>':'<button class="sbtn go" id="igc">'+(a?'Reconnect':'Connect')+'</button>'):'')+'</div><div class="srow"><div><b>Auto-log phrase / word</b><span class="stx">'+(ph?'“'+esc(ph)+'”':'Not set')+'</span></div><button class="sbtn" id="iph">'+(ph?'Change':'Set')+'</button></div><button class="btn alt" id="x">Close</button>');
+  var ig=!IG.sql?'<span class="stx">Coming soon</span>':a?(a.status==='ok'?'<span class="stx ok">@'+esc(a.username||'connected')+' connected</span>':a.status==='limited'?'<span class="stx ok">@'+esc(a.username||'connected')+' connected</span><span class="stx bad">Views, shares, saves and reposts are blocked. Reconnect to fix it.</span>':'<span class="stx bad">Needs reconnecting</span>'):'<span class="stx">Not connected</span>';
+  openSheet('<h3>Instagram &amp; auto-log</h3><div class="srow"><div><b>Instagram</b>'+ig+'</div>'+(IG.sql?(a&&a.status==='ok'?'<button class="sbtn" id="igd">Disconnect</button>':'<button class="sbtn go" id="igc">'+(a?'Reconnect':'Connect')+'</button>'):'')+(IG.sql&&a&&a.status==='limited'?'<button class="sbtn" id="igd" style="margin-left:6px">Disconnect</button>':'')+'</div><div class="srow"><div><b>Auto-log phrase / word</b><span class="stx">'+(ph?'“'+esc(ph)+'”':'Not set')+'</span></div><button class="sbtn" id="iph">'+(ph?'Change':'Set')+'</button></div>'+(IG.sql&&(!IG.acct||IG.acct.status!=='ok')?'<div class="pinfo">On Meta\u2019s sign-in screen, choose <b>Log in with Instagram</b>, then tap Continue. Your Instagram must be a Creator or Business account.</div>':'')+'<button class="btn alt" id="x">Close</button>');
   document.getElementById('x').onclick=closeSheet;
   var c=document.getElementById('igc');if(c)c.onclick=igConnect;
   var d=document.getElementById('igd');if(d)d.onclick=igDisconnect;
@@ -891,7 +890,7 @@ function setupSteps(){
   var a=IG.acct;
   return [
     {k:'deal',t:'Set your monthly deal',done:!!dealFor(monthNow()),sub:'Pay per video, agency cut and videos per month'},
-    {k:'ig',t:a&&a.status!=='ok'?'Reconnect Instagram':'Connect Instagram',done:!IG.sql||igOk(),soon:!IG.sql,sub:!IG.sql?'Coming soon':igOk()?'@'+(a.username||'connected'):'Sign in with Facebook to link your Instagram'},
+    {k:'ig',t:a&&!igOk()?'Reconnect Instagram':'Connect Instagram',done:!IG.sql||igOk(),soon:!IG.sql,sub:!IG.sql?'Coming soon':igOk()?'@'+(a.username||'connected'):'Choose Log in with Instagram on Meta\u2019s screen'},
     {k:'phrase',t:'Auto-log phrase / word',done:!!phraseNow(),sub:phraseNow()?'“'+phraseNow()+'”':'Posts with it in the caption log themselves'}];
 }
 function setupShown(){if(!user||!canVideos())return false;return setupSteps().some(function(s){return !s.done})}
@@ -908,13 +907,15 @@ function paintSetup(){
 document.getElementById('setup').addEventListener('click',function(e){var b=e.target.closest('[data-step]');if(!b)return;var k=b.dataset.step;
   if(k==='deal')editDeal();else if(k==='phrase')editPhrase();else if(k==='ig'){if(!IG.sql)toast('Connect Instagram is coming soon.');else if(igOk())openIgSettings();else igConnect()}});
 function igReturn(){
-  var m=location.search.match(/[?&]ig=([a-z]+)/);if(!m)return;
+  var m=location.search.match(/[?&]ig=([a-z]+)/);if(!m)return false;
   history.replaceState(null,'',location.pathname);
   var k=m[1];
   if(k==='connected'){toast('Instagram connected.',true);igSync(true)}
+  else if(k==='limited'){toast('Instagram connected, but views, shares, saves and reposts are blocked. Reconnect once the insights permission is on.');setTimeout(function(){igSync(true)},5000)}
+  else if(k==='noig')toast('No Instagram account came through. It must be a Creator or Business account, and you need to choose it when signing in.');
   else if(k==='cancelled')toast('Instagram connect was cancelled.');
-  else if(k==='nopage')toast('No Instagram found. Make it a Creator or Business account linked to a Facebook Page you manage, then try again.');
   else toast('Couldn’t connect Instagram. Try again.');
+  return true;
 }
 
 /* ---------- Members (owner only) ---------- */
@@ -939,7 +940,7 @@ async function invite(email,role){
 var APP_URL='https://6gyf2rk84w-hue.github.io/quiet-lantern-marble-47/';
 function inviteText(inv){
   var head='Here’s your app:\n'+APP_URL+'\n\nEmail: '+inv.email+'\n\nPassword: '+inv.password+'\n\n';
-  if(IG.sql&&inv.role!=='viewer')return head+'1. Copy and paste this link into Safari, or press and hold it and tap Open in Safari:\nhttps://developers.facebook.com/requests/\n\n2. Log into your real Facebook, then tap Confirm on the tester invite.\n\n3. Make sure your Instagram is a Creator or Business account linked to a Facebook Page you manage.\n\n4. Open the app link in Safari, tap Share, then Add to Home Screen.\n\n5. Open the app from your home screen, sign in, and tap Connect Instagram.';
+  if(IG.sql&&inv.role!=='viewer')return head+'1. Copy and paste this link into Safari, or press and hold it and tap Open in Safari:\nhttps://www.instagram.com/accounts/manage_access/\n\n2. Log into your real Instagram, tap Tester Invites, then tap Accept.\n\n3. Open the app link in Safari, tap Share, then Add to Home Screen.\n\n4. Open the app from your home screen, sign in, and tap Connect Instagram.';
   return head+'1. Open the app link in Safari, tap Share, then Add to Home Screen.\n\n2. Open the app from your home screen and sign in.';
 }
 function showInvite(inv){
