@@ -22,6 +22,7 @@
  *   me: the signed-in person's id (new videos get o._by = me)
  *   byLabel(o) — small "by …" tag on cards when everyone is shown
  *   planLabel(plan) — text shown next to a picked service (default: plan.site)
+ *   deal(month): {per, cut, count} | null — the signed-in person's monthly deal; onDeal() opens the editor
  *   onLogged(o, setStat) — runs after a video is logged; setStat(stat, {qty, plan} | null)
  *   confirm(what, go) — host asks "are you sure?" before a delete, then calls go()
  *   linkPlaceholder: string — grey example text in the link box
@@ -71,7 +72,7 @@
     const prices = opt.prices || null;
     const rates = Object.assign({}, DEF_RATES, opt.rates || {});
     const L = Object.assign({ order: "order", orders: "orders" }, opt.labels || {});
-    const st = { orders: [], month: monthKey(Date.now()), edit: null, open: null, ask: null, busy: false, arch: null, who: null };
+    const st = { orders: [], month: monthKey(Date.now()), edit: null, open: null, ask: null, busy: false, arch: null, who: null, shown: {} };
     const vis = () => st.who ? st.orders.filter(o => o._by === st.who) : st.orders;
     const planText = p => opt.planLabel ? opt.planLabel(p) : (p.site || p.name || "");
     root.classList.add("ot");
@@ -157,22 +158,45 @@
         ${done.length ? `<div class="ot-done">Done ${done.map(([s, lb, ic]) => { const [c, sy] = mark(o, s); return `<span class="ot-chip mk-${c}" title="${lb}">${sy} ${icon(s, 18) || ic}</span>`; }).join("")}</div>` : ""}
         ${usdV ? `<div class="ot-usd">${usd(usdV)}</div>` : ""}</div>`;
     }
+    const cash = v => "$" + (Math.round(v * 100) / 100).toLocaleString("en-US", { maximumFractionDigits: 2 });
+    const showDeal = () => !RO && opt.deal && (!st.who || st.who === opt.me);
+    const dealOf = m => { try { return opt.deal(m); } catch (e) { return null; } };
+    const ownIn = m => st.orders.filter(o => o.month === m && (!opt.me || !o._by || o._by === opt.me));
+    function dealCard(cur) {
+      const d = dealOf(st.month);
+      if (!d) return st.month === cur ? `<button class="ot-dset" type="button" data-ot-deal="1"><b>🎯 Set monthly deal</b><small>Pick your pay per video and how many videos a month</small></button>` : "";
+      const n = Math.max(1, +d.count || 1), net = (+d.per || 0) * (1 - (+d.cut || 0) / 100), posted = ownIn(st.month).length, done = Math.min(posted, n);
+      const earned = done * net, rest = (n - done) * net, over = st.month < cur;
+      return `<button class="ot-deal" type="button" data-ot-deal="1" aria-label="Monthly deal, tap to change">
+        <div class="ot-segs${n > 20 ? " many" : ""}">${Array.from({ length: n }, (_, i) => `<i class="${i < done ? "on" : ""}"></i>`).join("")}</div>
+        <div class="ot-dnums"><div><b class="ot-earn" data-ot-count="${earned}">${cash(earned)}</b><small>earned</small></div><div class="r"><b>${cash(rest)}</b><small>${over ? "missed" : "left to earn"}</small></div></div>
+        <div class="ot-dline">${over ? (done >= n ? "✅ Month over · " : "📅 Month over · ") : ""}${posted} of ${n} ${esc(n === 1 ? L.order : L.orders)} posted</div></button>`;
+    }
+    function countUp() {
+      const el = root.querySelector("[data-ot-count]"); if (!el) return;
+      const to = +el.dataset.otCount, key = st.month + "|" + (st.who || ""), from = st.shown[key] == null ? 0 : st.shown[key];
+      st.shown[key] = to; if (from === to) return;
+      const t0 = performance.now(), dur = 900;
+      const step = t => { const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.textContent = cash(from + (to - from) * e); if (k < 1 && el.isConnected) requestAnimationFrame(step); };
+      el.textContent = cash(from); requestAnimationFrame(step);
+    }
     const people = () => { try { return (opt.people && opt.people()) || []; } catch (e) { return []; } };
     function draw() {
       const now = Date.now(), months = shownMonths(); if (!months.includes(st.month)) st.month = months[months.length - 1];
       const cur = monthKey(now), mine = vis().filter(o => o.month === st.month).sort((a, b) => a.postedAt - b.postedAt);
       const live = mine.filter(o => !finished(o, now)), fin = mine.filter(o => finished(o, now));
-      const total = mine.reduce((t, o) => t + value(o), 0), left = Math.max(0, target - mine.length);
+      const total = mine.reduce((t, o) => t + value(o), 0), dl = showDeal() ? dealOf(st.month) : null, left = dl ? Math.max(0, (+dl.count || 0) - ownIn(st.month).length) : 0;
       const arch = [...new Set(vis().map(o => o.month).filter(m => !months.includes(m)))].sort().reverse();
       let h = `<div class="ot-top"><div class="ot-seg">${months.map(m => `<button type="button" data-ot-m="${m}" aria-pressed="${m === st.month}">${monthName(m)}</button>`).join("")}</div>
         <button class="ot-ref ${st.busy ? "spin" : ""}" type="button" data-ot-ref="1"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>Refresh</button></div>
         ${people().length > 2 ? `<div class="ot-who">${people().map(x => `<button type="button" data-ot-who="${x.id == null ? "" : esc(x.id)}" aria-pressed="${(x.id || null) === st.who}">${esc(x.label)}</button>`).join("")}</div>` : ""}
-        <div class="ot-grand"><span class="lb">Grand total · ${monthName(st.month)}</span><b>${usd(total)}</b><small>${mine.length}/${target} ${esc(L.orders)}</small></div>
+        ${showDeal() ? dealCard(cur) : ""}
+        <div class="ot-grand"><span class="lb">Grand total · ${monthName(st.month)}</span><b>${usd(total)}</b></div>
         <div class="ot-key"><span>🟢 In progress</span><span>🟡 Stalling</span><span>🔴 Needs review</span></div>`;
       h += live.length ? live.map(o => card(o, mine.indexOf(o) + 1, now)).join("") : (st.month === cur && !RO && !fin.length
         ? `<button class="ot-big" type="button" data-ot-focus="1"><i aria-hidden="true">+</i>Add an ${esc(L.order === "video" ? "order" : L.order)}</button>`
         : `<div class="ot-empty">No ${esc(L.orders)} yet for ${monthName(st.month)}.</div>`);
-      if (st.month === cur && !RO) h += `<form class="ot-log" data-ot-log="1" autocomplete="off"><div class="ot-log-h">${left ? `📌 <b>${left}</b> left this month` : `Log a posted ${esc(L.order)}`}</div>
+      if (st.month === cur && !RO) h += `<form class="ot-log" data-ot-log="1" autocomplete="off"><div class="ot-log-h">${dl && left ? `📌 <b>${left}</b> left this month` : dl ? `🔥 Deal complete · log extras here` : `Log a posted ${esc(L.order)}`}</div>
         <label class="ot-lbl">Title<input class="ot-in" name="title" placeholder="Title your video"></label><label class="ot-lbl">Link<input class="ot-in" name="link" inputmode="url" autocapitalize="off" placeholder="${esc(opt.linkPlaceholder || "Instagram post link")}"></label>
         <button class="ot-btn ot-logbtn" type="submit"><i aria-hidden="true">+</i>Log ${esc(L.order)}</button></form>`;
       if (fin.length) h += `<div class="ot-sec"><div class="ot-sec-h">Completed</div>${fin.map(o => `<button class="ot-arow" type="button" data-ot-open="${esc(o.id)}">${esc(o.title || L.order + " " + (mine.indexOf(o) + 1))}<span>${fmt(real(o, "views"))} views ${st.open === o.id ? "▾" : "›"}</span></button>${st.open === o.id ? card(o, mine.indexOf(o) + 1, now) : ""}`).join("")}</div>`;
@@ -181,17 +205,18 @@
       if (st.ask) { const [id, s] = st.ask, o = st.orders.find(x => x.id === id), lb = (STATS.find(x => x[0] === s) || [])[1];
         h += `<div class="ot-pop" data-ot-x="1"><div><b>${esc(lb)}</b><p>${fmt(real(o, s))} of ${fmt(goal(o, s))} (${pct(o, s)}%). Mark this goal complete?</p>
           <div class="ot-row"><button class="ot-btn" type="button" data-ot-mark="1">Mark complete</button><button class="ot-btn ghost" type="button" data-ot-x="1">Cancel</button></div></div></div>`; }
-      root.innerHTML = h;
+      root.innerHTML = h; countUp();
     }
     function toast(m) { const t = document.createElement("div"); t.className = "ot-toast"; t.textContent = m; document.body.appendChild(t); setTimeout(() => t.remove(), 2200); }
 
     // ---- taps -----------------------------------------------------------------
     root.addEventListener("click", async e => {
-      const b = e.target.closest("[data-ot-m],[data-ot-ref],[data-ot-edit],[data-ot-save],[data-ot-del],[data-ot-copy],[data-ot-bot],[data-ot-mark],[data-ot-x],[data-ot-open],[data-ot-arch],[data-ot-pick],[data-ot-focus],[data-ot-who]");
+      const b = e.target.closest("[data-ot-m],[data-ot-ref],[data-ot-edit],[data-ot-save],[data-ot-del],[data-ot-copy],[data-ot-bot],[data-ot-mark],[data-ot-x],[data-ot-open],[data-ot-arch],[data-ot-pick],[data-ot-focus],[data-ot-who],[data-ot-deal]");
       if (!b) return; const d = b.dataset;
       if (d.otX && e.target !== b) return;
       if (d.otPick && e.target.closest("[data-ot-bot]")) return;
-      if (d.otWho !== undefined) { st.who = d.otWho || null; st.open = null; st.arch = null; draw(); }
+      if (d.otDeal) { if (opt.onDeal && !RO) opt.onDeal(); }
+      else if (d.otWho !== undefined) { st.who = d.otWho || null; st.open = null; st.arch = null; draw(); }
       else if (d.otM) { st.month = d.otM; draw(); }
       else if (d.otRef) refresh(false);
       else if (d.otEdit) { st.edit = st.edit === d.otEdit ? null : d.otEdit; draw(); }
@@ -237,7 +262,7 @@
     const redraw = setInterval(() => { if (!document.hidden && !root.querySelector("input:focus")) draw(); }, 60e3); // stall colors move with time
     async function reload() { if (st.edit || st.ask || root.querySelector("input:focus")) return;
       try { const o = await store.load(); if (Array.isArray(o)) { st.orders = o; draw(); } } catch (e) {} }
-    return { refresh: () => refresh(false), reload, destroy() { clearInterval(tick); clearInterval(redraw); root.innerHTML = ""; root.classList.remove("ot"); }, get orders() { return st.orders; } };
+    return { refresh: () => refresh(false), reload, redraw: () => draw(), destroy() { clearInterval(tick); clearInterval(redraw); root.innerHTML = ""; root.classList.remove("ot"); }, get orders() { return st.orders; } };
   }
 
   global.OrderTracker = { mount, cleanLink };
