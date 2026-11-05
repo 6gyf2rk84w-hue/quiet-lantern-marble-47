@@ -23,6 +23,8 @@
  *   byLabel(o) — small "by …" tag on cards when everyone is shown
  *   planLabel(plan) — text shown next to a picked service (default: plan.site)
  *   deal(month): {per, cut, count} | null — the signed-in person's monthly deal; onDeal() opens the editor
+ *   preview.fetch(link, order) — live numbers for one video; beforeRefresh() runs first when Refresh is tapped
+ *   noDealPrompt() — true hides the Set monthly deal button (host shows its own setup steps)
  *   onLogged(o, setStat) — runs after a video is logged; setStat(stat, {qty, plan} | null)
  *   confirm(what, go) — host asks "are you sure?" before a delete, then calls go()
  *   linkPlaceholder: string — grey example text in the link box
@@ -115,11 +117,12 @@
     // ---- data -----------------------------------------------------------------
     const save = async () => { try { await store.save(st.orders); } catch (e) { toast("Not saved: " + ((e && e.message) || e)); } };
     async function refresh(quiet) {
-      if (!preview || st.busy) { if (!quiet && !preview) toast("Live numbers arrive in the next update."); return; }
+      if (!quiet && opt.beforeRefresh && !st.busy) { st.busy = true; draw(); try { await opt.beforeRefresh(); } catch (e) {} st.busy = false; }
+      if (!preview || st.busy) { if (!quiet && !preview) { draw(); toast(opt.noPreviewText || "Live numbers arrive in the next update."); } return; }
       st.busy = true; draw();
       const now = Date.now();
       for (const o of st.orders) { if (o.month < prevMonth()) continue;
-        try { const r = await preview.fetch(o.link); if (r) applyReal(o, r, now); } catch (e) {} }
+        try { const r = await preview.fetch(o.link, o); if (r) applyReal(o, r, now); } catch (e) {} }
       st.busy = false; await save(); draw(); if (!quiet) toast("All up to date!");
     }
     const prevMonth = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return monthKey(d); };
@@ -139,7 +142,7 @@
     }
     function card(o, n, now) {
       const ed = st.edit === o.id, vg = goal(o, "views"), vS = state(o, "views", now);
-      const head = `<div class="ot-hd"><div class="ot-name"><small class="ot-num">${esc(L.order[0].toUpperCase() + L.order.slice(1))} ${n}${!st.who && opt.byLabel && opt.byLabel(o) ? ` <span class="ot-by">${esc(opt.byLabel(o))}</span>` : ""}</small>${o.title ? esc(o.title) : ""}</div>
+      const head = `<div class="ot-hd"><div class="ot-name"><small class="ot-num">${esc(L.order[0].toUpperCase() + L.order.slice(1))} ${n}${!st.who && opt.byLabel && opt.byLabel(o) ? ` <span class="ot-by">${esc(opt.byLabel(o))}</span>` : ""}${o.auto ? ` <span class="ot-by ot-auto">⚡ auto-logged</span>` : ""}</small>${o.title ? esc(o.title) : ""}</div>
         ${RO ? "" : `<button class="ot-edbtn" type="button" data-ot-edit="${esc(o.id)}">${ed ? "Done" : "✏️ Edit"}</button>`}</div>`;
       if (ed) return `<div class="ot-card">${head}
         <div class="ot-egrid" style="grid-template-columns:1fr"><label>Title<input class="ot-in" data-ot-f="title" value="${esc(o.title)}"></label>
@@ -164,7 +167,7 @@
     const ownIn = m => st.orders.filter(o => o.month === m && (!opt.me || !o._by || o._by === opt.me));
     function dealCard(cur) {
       const d = dealOf(st.month);
-      if (!d) return st.month === cur ? `<button class="ot-dset" type="button" data-ot-deal="1"><b>🎯 Set monthly deal</b><small>Pick your pay per video and how many videos a month</small></button>` : "";
+      if (!d) return st.month === cur && !(opt.noDealPrompt && opt.noDealPrompt()) ? `<button class="ot-dset" type="button" data-ot-deal="1"><b>🎯 Set monthly deal</b><small>Pick your pay per video and how many videos a month</small></button>` : "";
       const n = Math.max(1, +d.count || 1), net = (+d.per || 0) * (1 - (+d.cut || 0) / 100), posted = ownIn(st.month).length, done = Math.min(posted, n);
       const earned = done * net, rest = (n - done) * net, over = st.month < cur;
       return `<button class="ot-deal" type="button" data-ot-deal="1" aria-label="Monthly deal, tap to change">
@@ -252,7 +255,7 @@
       if (opt.me) o._by = opt.me; if (st.who && st.who !== o._by) st.who = null;
       st.orders.push(o); await save(); draw(); toast("Logged");
       if (opt.onLogged && !RO) opt.onLogged(o, (s, res) => setStat(o, s, res));
-      if (preview) { try { const r = await preview.fetch(link); if (r) { applyReal(o, r, Date.now()); await save(); draw(); } } catch (er) {} }
+      if (preview) { try { const r = await preview.fetch(link, o); if (r) { applyReal(o, r, Date.now()); await save(); draw(); } } catch (er) {} }
     });
 
     // ---- start ----------------------------------------------------------------

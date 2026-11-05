@@ -208,6 +208,28 @@ body.swiping .scr *{pointer-events:none!important}
 .fl2{display:block;font-size:13.5px;font-weight:600;color:var(--mute);margin:2px 2px 6px}
 .invbox{white-space:pre-wrap;overflow-wrap:anywhere;padding:12px 14px;margin:0 0 12px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid var(--line);font-size:15px;line-height:1.5;-webkit-user-select:text;user-select:text}
 .mrow2 .mem{font-size:14.5px;white-space:normal;overflow-wrap:anywhere;line-height:1.3}
+/* setup steps + Instagram settings */
+#setup{max-width:640px;margin:12px auto 0;padding:0 16px}
+.sbox{border-radius:22px;padding:14px;background:#1C2C38;border:1.5px solid rgba(107,227,141,.35);box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.shd{display:flex;justify-content:space-between;align-items:baseline;margin:2px 4px 10px}
+.shd b{font:800 19px/1.2 "Bricolage Grotesque","Arial Black",system-ui,sans-serif}
+.shd span{font-size:14px;font-weight:600;color:var(--mute)}
+.sstep{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:11px 12px;margin-top:8px;border-radius:15px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--ink)}
+.snum{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:15px;background:rgba(255,255,255,.1)}
+.sstep.done .snum{background:#6BE38D;color:#06210F}
+.sstep.done{border-color:rgba(107,227,141,.35)}
+.sstep.soon{opacity:.6}
+.stx2{flex:1;min-width:0}
+.stx2 b{display:block;font-size:16px}
+.stx2 small{display:block;color:var(--mute);font-size:13.5px;margin-top:1px;overflow-wrap:anywhere}
+.sstep .chev{color:var(--mute);font-size:20px}
+.srow{display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:10px;border-radius:15px;background:var(--card);border:1px solid var(--line)}
+.srow>div{flex:1;min-width:0}
+.srow b{display:block;font-size:16px}
+.stx{display:block;color:var(--mute);font-size:14px;margin-top:2px;overflow-wrap:anywhere}
+.stx.ok{color:#6BE38D}.stx.bad{color:var(--bad)}
+.sbtn{flex:none;padding:9px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card2);color:var(--ink);font-size:14.5px;font-weight:600}
+.sbtn.go{background:linear-gradient(135deg,var(--a1),var(--a2));border-color:transparent;color:#06210F}
 /* service picker */
 .pk-tabs{display:flex;gap:6px;overflow-x:auto;margin:0 0 12px;scrollbar-width:none}
 .pk-tabs::-webkit-scrollbar{display:none}
@@ -229,7 +251,7 @@ body.swiping .scr *{pointer-events:none!important}
 </style>
 </head>
 <body class="ot-on">
-<div id="oscreen" class="scr"><div class="ohead"><button class="omore" data-more="1" aria-label="More">&#8943;</button><h1>Orders Tracker</h1><div class="dots"><button data-scr="orders" aria-label="Orders Tracker"></button><button data-scr="panels" aria-label="Panels Tracker"></button></div></div><div id="otnote"><div>Orders are saved on this phone only for now. One quick setup step in Supabase will sync them for everyone.</div></div><div id="otroot"></div></div>
+<div id="oscreen" class="scr"><div class="ohead"><button class="omore" data-more="1" aria-label="More">&#8943;</button><h1>Orders Tracker</h1><div class="dots"><button data-scr="orders" aria-label="Orders Tracker"></button><button data-scr="panels" aria-label="Panels Tracker"></button></div></div><div id="otnote"><div>Orders are saved on this phone only for now. One quick setup step in Supabase will sync them for everyone.</div></div><div id="setup" style="display:none"></div><div id="otroot"></div></div>
 <div id="pscreen" class="scr" style="display:none">
 <div id="top">
   <div class="hrow"><button id="back" data-back="1" aria-label="Back">&#8592;</button><div class="tw"><h1 id="ttl">Panel Tracker</h1><div id="crumb"></div></div><button id="pen" data-pen="1" aria-label="Edit mode">&#9998;</button><button id="more" data-more="1" aria-label="More">&#8943;</button></div>
@@ -239,7 +261,7 @@ body.swiping .scr *{pointer-events:none!important}
 <div id="main"><div class="empty">Loading...</div></div>
 <button id="fab" aria-label="Add">+</button>
 </div>
-<div id="menu"><button class="mi" id="credsBtn" data-creds="1">Login credentials</button><button class="mi" id="modsBtn" data-mods="1" style="display:none">Members</button><button data-logout="1">Log out</button></div>
+<div id="menu"><button class="mi" id="igBtn" data-igset="1" style="display:none">Instagram &amp; auto-log</button><button class="mi" id="credsBtn" data-creds="1">Login credentials</button><button class="mi" id="modsBtn" data-mods="1" style="display:none">Members</button><button data-logout="1">Log out</button></div>
 <div id="mpage"><div class="chead"><button class="cb" data-mclose="1" aria-label="Back">&#8592;</button><h2>Members</h2></div><div id="mbody"></div></div>
 <div id="cpage"><div class="chead"><button class="cb" data-cclose="1" aria-label="Back">&#8592;</button><h2>Logins</h2><button class="btn" id="cadd" data-cadd="1" style="display:none;width:auto;margin:0;padding:10px 14px;font-size:15px">+ Add</button></div><div id="clist"></div></div>
 <div id="veil"><div id="sheet"></div></div>
@@ -307,9 +329,9 @@ function byPos(a,b){return (a.pos==null?1e12:a.pos)-(b.pos==null?1e12:b.pos)}
 function sortAll(){S.nodes.sort(byPos);S.orders.sort(byPos)}
 async function memberRow(){if(!user)return null;var r=await sb.from('members').select('*').eq('user_id',user.id);if(r.error)return {unk:true};return (r.data&&r.data[0])||null}
 async function stillMember(){var m=await memberRow();if(!m)return false;if(m.unk)return true;var nr=m.role||'viewer';if(nr!==role)setRole(nr);return true}
-function setRole(nr){role=nr;isViewer=!canPanels();if(isViewer){editing=false;if(scr!=='orders')setScreen('orders')}applyRole();render();mountOrders()}
-function applyRole(){var p=canPanels();document.getElementById('pen').style.display=p?'flex':'none';document.getElementById('credsBtn').style.display=p?'block':'none';document.getElementById('modsBtn').style.display=isAdmin?'block':'none';document.querySelectorAll('.dots').forEach(function(d){d.style.display=p?'flex':'none'})}
-function kick(msg){document.getElementById('cpage').classList.remove('on');document.getElementById('mpage').classList.remove('on');if(scr!=='orders')setScreen('orders');role='viewer';MEM=[];isViewer=true;applyRole();var u=user;user=null;isAdmin=false;S={nodes:[],orders:[]};path=[];editing=false;closeSheet();document.getElementById('main').innerHTML='';if(otApi){otApi.destroy();otApi=null}sb.auth.signOut().catch(function(){});document.getElementById('login').style.display='flex';document.getElementById('lmsg').textContent=msg||''}
+async function setRole(nr){role=nr;isViewer=!canPanels();if(isViewer){editing=false;if(scr!=='orders')setScreen('orders')}applyRole();render();await loadIg();mountOrders();paintSetup()}
+function applyRole(){var p=canPanels();document.getElementById('pen').style.display=p?'flex':'none';document.getElementById('credsBtn').style.display=p?'block':'none';document.getElementById('modsBtn').style.display=isAdmin?'block':'none';document.getElementById('igBtn').style.display=canVideos()?'block':'none';document.querySelectorAll('.dots').forEach(function(d){d.style.display=p?'flex':'none'})}
+function kick(msg){document.getElementById('cpage').classList.remove('on');document.getElementById('mpage').classList.remove('on');if(scr!=='orders')setScreen('orders');role='viewer';MEM=[];isViewer=true;applyRole();var u=user;user=null;isAdmin=false;S={nodes:[],orders:[]};path=[];editing=false;closeSheet();document.getElementById('main').innerHTML='';if(otApi){otApi.destroy();otApi=null}var se=document.getElementById('setup');se.innerHTML='';se.style.display='none';sb.auth.signOut().catch(function(){});document.getElementById('login').style.display='flex';document.getElementById('lmsg').textContent=msg||''}
 function refresh(){if(!user||dragging||document.hidden||document.getElementById('veil').style.display==='flex')return;q=q.then(async function(){if(!isAdmin&&!(await stillMember())){kick('Your access to this app has been removed.');return}if(canPanels()){await load();render()}if(isAdmin)await loadMem()}).catch(function(){})}
 async function start(u){
   user=u;document.getElementById('login').style.display='none';
@@ -321,7 +343,11 @@ async function start(u){
   isViewer=!canPanels();
   applyRole();
   if(isAdmin)await loadMem();
+  await loadIg();
   mountOrders();
+  paintSetup();
+  igReturn();
+  igSync(true);
   if(canPanels())await load();
   if(u.user_metadata&&u.user_metadata.must_change)setTimeout(function(){newPassword(true)},200);
   if(!S.nodes.length&&isAdmin){
@@ -607,11 +633,12 @@ document.getElementById('fab').onclick=function(){
 document.getElementById('veil').onclick=function(e){if(e.target.id==='veil'&&!forcePw)closeSheet()};
 document.addEventListener('click',function(e){
   if(e.target.closest('.grip'))return;
-  var t=e.target.closest('[data-back],[data-t],[data-open],[data-delnode],[data-delord],[data-st],[data-tog],[data-icon],[data-pen],[data-out],[data-more],[data-logout],[data-mods],[data-creds],[data-exinfo],[data-editid],[data-place],[data-check],[data-apv]');
+  var t=e.target.closest('[data-back],[data-t],[data-open],[data-delnode],[data-delord],[data-st],[data-tog],[data-icon],[data-pen],[data-out],[data-more],[data-logout],[data-mods],[data-creds],[data-exinfo],[data-editid],[data-place],[data-check],[data-apv],[data-igset]');
   var mn=document.getElementById('menu');if(!t||!t.dataset.more)mn.classList.remove('on');if(!t)return;
   var d=t.dataset;
   if(held){held=false;return}
-  if(d.icon){openIcon(d.icon);return}
+  if(d.igset){openIgSettings();return}
+  else if(d.icon){openIcon(d.icon);return}
   else if(d.apv){if(!isAdmin)return;var ao=S.orders.find(function(o){return o.id===d.apv});if(!ao)return;if(!hasAppr){toast('Run the roles setup in Supabase first, then approve.');return}ao.approved=!ao.approved;save();toast(ao.approved?'Approved. Users can now pick this service.':'Hidden from users.',ao.approved)}
   else if(d.exinfo){exOpen=!exOpen}
   else if(d.editid){if(!isViewer)editId(d.editid);return}
@@ -692,7 +719,10 @@ function mountOrders(){
     planLabel:planLabel,
     confirm:function(what,go){askDel(what,go)},
     onPick:function(o,s,done){pickService(o,s,done)},
-    deal:dealFor,onDeal:editDeal,
+    deal:dealFor,onDeal:editDeal,noDealPrompt:setupShown,
+    preview:canVideos()&&IG.sql?{fetch:function(link,o){return igPreview(o)}}:null,
+    beforeRefresh:function(){return igSync(false)},
+    noPreviewText:'Connect Instagram to pull live numbers.',
     onLogged:logWizard});
 }
 var STAT_NAME={views:'Views',likes:'Likes',shares:'Shares',saves:'Saves',reposts:'Reposts',comments:'Comments'},STAT_ORDER=['views','likes','shares','saves','reposts','comments'];
@@ -784,8 +814,104 @@ function editDeal(){
     var b=document.getElementById('ok');b.disabled=true;b.textContent='Saving...';
     var r=await sb.auth.updateUser({data:{deals:ds}});
     if(r.error){b.disabled=false;b.textContent='Save deal';e.textContent=r.error.message;return}
-    if(r.data&&r.data.user)user=r.data.user;closeSheet();toast('Deal saved.',true);if(otApi)otApi.redraw();
+    if(r.data&&r.data.user)user=r.data.user;closeSheet();toast('Deal saved.',true);paintSetup();if(otApi)otApi.redraw();
   };
+}
+
+/* ---------- Instagram + auto-log ---------- */
+var IG={sql:false,acct:null};
+async function loadIg(){
+  if(!canVideos()){IG={sql:false,acct:null};return}
+  try{var r=await sb.rpc('instagram_status');if(r.error){IG={sql:false,acct:null};return}IG={sql:true,acct:(r.data&&r.data[0])||null}}catch(e){IG={sql:false,acct:null}}
+}
+function igOk(){return !!(IG.acct&&IG.acct.status==='ok')}
+function phraseNow(){var a=user&&user.user_metadata&&user.user_metadata.autolog;return a&&a.phrase?a.phrase:''}
+async function igCall(body){
+  try{
+    var r=await sb.functions.invoke('instagram',{body:body});
+    if(r.error){var m=r.error.message||'Request failed';try{var j=await r.error.context.json();if(j&&j.error)m=j.error}catch(e){}return {error:m}}
+    return r.data||{};
+  }catch(e){return {error:String((e&&e.message)||e)}}
+}
+async function igConnect(){
+  if(!IG.sql){toast('Connect Instagram is coming soon.');return}
+  toast('Opening Instagram...',true);
+  var r=await igCall({action:'connect'});
+  if(r.url){location.href=r.url;return}
+  toast(/not_configured|not found|Failed to send|404/i.test(r.error||'')?'Connect Instagram is coming soon.':'Could not open Instagram: '+(r.error||'try again'));
+}
+function igDisconnect(){
+  openSheet('<h3>Disconnect Instagram?</h3><p style="color:var(--mute);margin:0 0 14px">'+esc('@'+((IG.acct&&IG.acct.username)||''))+' will be disconnected. Previews and auto-log stop until you connect again. Your logged videos stay.</p><button class="btn dangerbtn" id="yes">Yes, disconnect</button><button class="btn alt" id="x">Cancel</button>');
+  document.getElementById('x').onclick=closeSheet;
+  document.getElementById('yes').onclick=async function(){closeSheet();var r=await igCall({action:'disconnect'});if(r.error){toast('Not disconnected: '+r.error);return}await loadIg();paintSetup();toast('Instagram disconnected.',true)};
+}
+async function igSync(quiet){
+  if(!igOk()||!phraseNow())return 0;
+  var r=await igCall({action:'sync'});var n=(r&&r.logged)||0;
+  if(n){if(otApi)otApi.reload();toast(n===1?'1 new video was auto-logged.':n+' new videos were auto-logged.',true)}
+  return n;
+}
+async function igPreview(o){
+  if(!o||!o.id||vLocal||!IG.sql)return null;
+  var r=await igCall({action:'preview',video:o.id});
+  return r&&!r.error&&Object.keys(r).length?r:null;
+}
+function editPhrase(){
+  if(!canVideos())return;
+  openSheet('<h3>Auto-log phrase / word</h3><div class="pinfo">Put this in a post’s caption and it logs itself as your next video. Capitals and extra spaces don’t matter.</div><input type="text" id="aph" placeholder="e.g. fresh drop with sam" autocomplete="off" autocapitalize="off" maxlength="80"><div class="pinfo" style="margin-top:8px">A short phrase is safest. If you use a single word, make it one you wouldn’t normally write.</div><div class="perr" id="aerr"></div><button class="btn" id="ok">Save</button><button class="btn alt" id="x">Cancel</button>');
+  var f=document.getElementById('aph');f.value=phraseNow();
+  document.getElementById('x').onclick=closeSheet;
+  async function store(v){
+    var r=await sb.auth.updateUser({data:{autolog:{phrase:v,since:new Date().toISOString()}}});
+    if(r.error){toast('Not saved: '+r.error.message);return}
+    if(r.data&&r.data.user)user=r.data.user;closeSheet();paintSetup();toast('Auto-log is set to “'+v+'”.',true);igSync(true);
+  }
+  document.getElementById('ok').onclick=function(){
+    var v=f.value.replace(/\s+/g,' ').trim(),e=document.getElementById('aerr');e.textContent='';
+    if(v.length<3){e.textContent='Use at least 3 characters.';return}
+    if(v.indexOf(' ')<0){
+      openSheet('<h3>Are you sure?</h3><p style="color:var(--mute);margin:0 0 14px">“'+esc(v)+'” is a single word, so it could accidentally log other videos that happen to use it.</p><button class="btn" id="yes">Yes, I’m sure</button><button class="btn alt" id="x">Pick something else</button>');
+      document.getElementById('yes').onclick=function(){store(v)};
+      document.getElementById('x').onclick=editPhrase;return;
+    }
+    store(v);
+  };
+}
+function openIgSettings(){
+  document.getElementById('menu').classList.remove('on');
+  var a=IG.acct,ph=phraseNow();
+  var ig=!IG.sql?'<span class="stx">Coming soon</span>':a?(a.status==='ok'?'<span class="stx ok">@'+esc(a.username||'connected')+' connected</span>':'<span class="stx bad">Needs reconnecting</span>'):'<span class="stx">Not connected</span>';
+  openSheet('<h3>Instagram &amp; auto-log</h3><div class="srow"><div><b>Instagram</b>'+ig+'</div>'+(IG.sql?(a&&a.status==='ok'?'<button class="sbtn" id="igd">Disconnect</button>':'<button class="sbtn go" id="igc">'+(a?'Reconnect':'Connect')+'</button>'):'')+'</div><div class="srow"><div><b>Auto-log phrase / word</b><span class="stx">'+(ph?'“'+esc(ph)+'”':'Not set')+'</span></div><button class="sbtn" id="iph">'+(ph?'Change':'Set')+'</button></div><button class="btn alt" id="x">Close</button>');
+  document.getElementById('x').onclick=closeSheet;
+  var c=document.getElementById('igc');if(c)c.onclick=igConnect;
+  var d=document.getElementById('igd');if(d)d.onclick=igDisconnect;
+  document.getElementById('iph').onclick=editPhrase;
+}
+function setupSteps(){
+  var a=IG.acct;
+  return [
+    {k:'deal',t:'Set your monthly deal',done:!!dealFor(monthNow()),sub:'Pay per video, agency cut and videos per month'},
+    {k:'ig',t:a&&a.status!=='ok'?'Reconnect Instagram':'Connect Instagram',done:!IG.sql||igOk(),soon:!IG.sql,sub:!IG.sql?'Coming soon':igOk()?'@'+(a.username||'connected'):'So your posts show their previews and numbers'},
+    {k:'phrase',t:'Auto-log phrase / word',done:!!phraseNow(),sub:phraseNow()?'“'+phraseNow()+'”':'Posts with it in the caption log themselves'}];
+}
+function setupShown(){if(!user||!canVideos())return false;return setupSteps().some(function(s){return !s.done})}
+function paintSetup(){
+  var el=document.getElementById('setup');if(!el)return;
+  if(!setupShown()){el.innerHTML='';el.style.display='none';if(otApi)otApi.redraw();return}
+  var st=setupSteps(),n=st.filter(function(s){return s.done}).length;
+  el.style.display='block';
+  el.innerHTML='<div class="sbox"><div class="shd"><b>Get set up</b><span>'+n+' of '+st.length+' done</span></div>'+st.map(function(s,i){return '<button class="sstep'+(s.done&&!s.soon?' done':'')+(s.soon?' soon':'')+'" data-step="'+s.k+'"><span class="snum">'+(s.done&&!s.soon?'✓':i+1)+'</span><span class="stx2"><b>'+esc(s.t)+'</b><small>'+esc(s.sub)+'</small></span>'+(s.soon?'':'<span class="chev">›</span>')+'</button>'}).join('')+'</div>';
+  if(otApi)otApi.redraw();
+}
+document.getElementById('setup').addEventListener('click',function(e){var b=e.target.closest('[data-step]');if(!b)return;var k=b.dataset.step;
+  if(k==='deal')editDeal();else if(k==='phrase')editPhrase();else if(k==='ig'){if(!IG.sql)toast('Connect Instagram is coming soon.');else if(igOk())openIgSettings();else igConnect()}});
+function igReturn(){
+  var m=location.search.match(/[?&]ig=([a-z]+)/);if(!m)return;
+  history.replaceState(null,'',location.pathname);
+  var k=m[1];
+  if(k==='connected'){toast('Instagram connected.',true);igSync(true)}
+  else if(k==='cancelled')toast('Instagram connect was cancelled.');
+  else toast('Couldn’t connect Instagram. Try again.');
 }
 
 /* ---------- Members (owner only) ---------- */
