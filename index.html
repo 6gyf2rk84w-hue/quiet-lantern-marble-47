@@ -936,9 +936,14 @@ async function invite(email,role){
   }catch(e){return {error:esc(String((e&&e.message)||e))}}
 }
 var APP_URL='https://6gyf2rk84w-hue.github.io/quiet-lantern-marble-47/';
+function inviteText(inv){
+  var head='Here’s your app:\n'+APP_URL+'\n\nEmail: '+inv.email+'\n\nPassword: '+inv.password+'\n\n';
+  if(IG.sql&&inv.role!=='viewer')return head+'1. Copy and paste this link into Safari, or press and hold it and tap Open in Safari:\nhttps://www.instagram.com/accounts/manage_access/\n\n2. Log into your real Instagram, tap Tester Invites, then tap Accept.\n\n3. Open the app link in Safari, tap Share, then Add to Home Screen.\n\n4. Open the app from your home screen, sign in, and tap Connect Instagram.';
+  return head+'1. Open the app link in Safari, tap Share, then Add to Home Screen.\n\n2. Open the app from your home screen and sign in.';
+}
 function showInvite(inv){
-  var txt='Hey! You’re in on Panel Tracker \u{1F389}\n\nOpen: '+APP_URL+'\nEmail: '+inv.email+'\nTemporary password: '+inv.password+'\n\nYou’ll pick your own password the first time you sign in.';
-  openSheet('<h3>'+esc(short(inv.email))+' is added</h3><div class="pinfo">Text them this. You won’t see this password again.</div><div class="invbox">'+esc(txt)+'</div><button class="btn" id="ok">Copy message</button><button class="btn alt" id="x">Done</button>');
+  var txt=inviteText(inv);
+  openSheet('<h3>'+esc(short(inv.email))+' is added</h3><div class="pinfo">Send them this. You won’t see this password again.</div><div class="invbox">'+esc(txt)+'</div><a class="btn" id="sms" href="sms:&body='+encodeURIComponent(txt)+'" style="display:block;text-align:center;text-decoration:none">Text it to them</a><button class="btn alt" id="ok">Copy message</button><button class="btn alt" id="x">Done</button>');
   document.getElementById('ok').onclick=function(){copyText(txt)};
   document.getElementById('x').onclick=closeSheet;
 }
