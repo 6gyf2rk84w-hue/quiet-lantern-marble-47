@@ -154,3 +154,72 @@
 .ot-manual span{font-weight:600;font-size:14.5px;color:rgba(255,255,255,.6)}
 .ot-mbtn{flex:none;border:1.5px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:rgba(255,255,255,.85);border-radius:999px;padding:9px 16px;font-weight:700;font-size:15px}
 .ot-addn{font-weight:600;font-size:14px;color:rgba(255,255,255,.6);margin-top:-6px}
+/* compact cards (about half the old height) */
+.ot-card{padding:12px;gap:8px;border-radius:18px}
+.ot-hd{align-items:center;gap:8px}
+.ot-name{font-size:15.5px;-webkit-line-clamp:1}
+.ot-num{font-size:11px;margin-bottom:1px}
+.ot-edbtn{padding:4px 10px;font-size:12.5px}
+.ot-views{font-size:22px}
+.ot-views small{font-size:13px;margin-left:4px}
+.ot-views .ot-plan{font-size:12px;margin-left:8px}
+.ot-chk{width:20px;height:20px;font-size:12px;margin-left:6px}
+.ot-mid{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}
+.ot-thumb{width:64px;height:86px;border-radius:12px}
+.ot-side{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:58px;padding:8px 6px;border:0;border-radius:14px;font-size:17px;line-height:1}
+.ot-side span{font-size:12.5px;font-weight:800;line-height:1.15}
+.ot-side.ot-copy{background:rgba(79,160,255,.16);color:#BFDCFF}
+.ot-side.ot-order{background:rgba(27,224,127,.16);color:#8FF5C2}
+span.ot-side{visibility:hidden}
+.ot-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ot-stc{flex-direction:column;align-items:stretch;gap:4px;padding:7px 9px;border-radius:12px}
+.ot-stc .n{display:flex;align-items:center;gap:6px;min-width:0}
+.ot-stc .ic{width:18px;flex:none;display:grid;place-items:center}
+.ot-stc .n b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ot-stc .n .gl{font-weight:700;font-size:12px;color:rgba(255,255,255,.5)}
+.ot-bar-r{gap:5px}
+.ot-bar{height:6px;border-radius:3px}
+.ot-bar i{border-radius:3px}
+.ot-pct{min-width:32px;font-size:12.5px}
+.ot-bot{width:28px;height:22px;font-size:12px;border-width:1.5px}
+.ot-adds{gap:6px}
+.ot-add{padding:5px 9px;font-size:12.5px;gap:4px}
+.ot-done{gap:6px;font-size:12.5px}
+.ot-chip{height:24px;padding:0 8px;font-size:12px}
+.ot-usd{font-size:16px;margin-top:-4px}
+/* grand total row with Order all */
+.ot-grand{flex-direction:row;justify-content:space-between;align-items:center;text-align:left;gap:12px}
+.ot-grand>div{display:flex;flex-direction:column;gap:0}
+.ot-grand b{font-size:32px}
+.ot-orderall{flex:none;border:0;border-radius:999px;padding:11px 16px;background:var(--ot-green);color:#06210F;font-weight:800;font-size:15px}
+/* pop-ups in the middle of the screen */
+.ot-pop{place-items:center}
+/* compact, round 2: .ot prefix so these beat the ".ot button" font rule */
+.ot-name{display:block;-webkit-line-clamp:unset}
+.ot-ttl{display:block;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ot-num{font-size:10.5px}
+.ot .ot-edbtn{padding:4px 10px;font-size:12.5px}
+.ot-hd .ot-usd{flex:none;font-size:15px;margin:0;align-self:center}
+.ot-vrow{display:flex;align-items:center;gap:10px}
+.ot-vrow .ot-views{flex:none;font-size:19px}
+.ot-vrow .ot-bar-r{flex:1;min-width:0}
+.ot-views .g{color:rgba(255,255,255,.5)}
+.ot-thumb{width:56px;height:74px;border-radius:11px}
+.ot .ot-side{min-height:48px;padding:6px;gap:2px;font-size:15px}
+.ot-side span{font-size:12px}
+.ot-stats{grid-template-columns:repeat(3,1fr);gap:5px}
+.ot-stc{padding:6px 7px;gap:3px;border-radius:11px}
+.ot-stc .n{gap:4px}
+.ot-stc .n b{flex:1;min-width:0;font-size:12.5px}
+.ot-stc .n .gl{font-size:11px}
+.ot-stc .ic{width:16px}
+.ot .ot-stc .ot-bot{flex:none;width:22px;height:18px;font-size:10px;border-width:1px}
+.ot-stc .ot-pct{min-width:26px;font-size:11px}
+.ot .ot-vrow .ot-bot{width:26px;height:20px;font-size:11px}
+.ot-vrow .ot-pct{font-size:12.5px}
+.ot-adds{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -12px;padding:0 12px}
+.ot-adds::-webkit-scrollbar{display:none}
+.ot .ot-add{flex:none;padding:4px 9px;font-size:12px;border-width:1px}
+.ot .ot-orderall{padding:10px 15px;font-size:14.5px}
+.ot .ot-mbtn{padding:8px 15px;font-size:14.5px}
+.ot .ot-copy{font-size:15px}

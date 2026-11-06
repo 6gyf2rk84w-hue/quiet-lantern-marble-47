@@ -233,6 +233,12 @@ body.swiping .scr *{pointer-events:none!important}
 /* no zooming: text boxes stay at 16px+ (iPhones zoom into smaller ones), no double-tap zoom */
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation}
 input,textarea,select{font-size:max(16px,1em)!important}
+/* order sheets */
+.osl{display:flex;flex-direction:column;gap:6px;max-height:40vh;overflow-y:auto;margin-bottom:10px}
+.osr{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:13px;background:var(--card);border:1px solid var(--line)}
+.osr span{min-width:0}.osr b{display:block;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.osr small{display:block;color:var(--mute);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.osr em{flex:none;font-style:normal;font-weight:700;color:var(--ok)}
 /* service picker */
 .pk-tabs{display:flex;gap:6px;overflow-x:auto;margin:0 0 12px;scrollbar-width:none}
 .pk-tabs::-webkit-scrollbar{display:none}
@@ -722,6 +728,7 @@ function mountOrders(){
     confirm:function(what,go){askDel(what,go)},
     onPick:function(o,s,done){pickService(o,s,done)},
     deal:dealFor,onDeal:editDeal,noDealPrompt:setupShown,
+    onOrder:function(o){orderSheet([o],true)},onOrderAll:function(l){orderSheet(l,false)},
     preview:canVideos()&&IG.sql?{fetch:function(link,o){return igPreview(o)}}:null,
     beforeRefresh:function(){return igSync(false)},
     noPreviewText:'Connect Instagram to pull live numbers.',
@@ -933,6 +940,30 @@ function igReturn(){
   else if(k==='cancelled')toast('Instagram connect was cancelled.');
   else toast('Couldn’t connect Instagram. Try again.');
   return true;
+}
+
+/* ---------- Place order / Order all (paying unlocks once panels are connected) ---------- */
+function planned(v){
+  var out=[];STAT_ORDER.forEach(function(s){var p=(v.plan||{})[s],q=+((v.goals||{})[s]||0);if(p&&q)out.push({s:s,name:planLabel(p)||p.name||'',svc:p.name||'',qty:q,cost:(+p.price||0)*q/1000})});
+  return out;
+}
+function orderSheet(list,single){
+  if(!canVideos())return;
+  var v=list[0];
+  if(single&&!planned(v).length){
+    openSheet('<h3>Place order</h3><p class="pinfo">'+esc(v.title||'This video')+' has no services picked yet. Pick what it needs first.</p><button class="btn" id="ok">Pick services</button><button class="btn alt" id="x">Close</button>');
+    document.getElementById('ok').onclick=function(){logWizard(v,function(s,res){return otApi.setStat(v,s,res)})};
+    document.getElementById('x').onclick=closeSheet;return;
+  }
+  var total=0,rows='';
+  if(single){
+    planned(v).forEach(function(r){total+=r.cost;rows+='<div class="osr"><span><b>'+esc(STAT_NAME[r.s])+'</b><small>'+esc(r.svc)+(r.name&&r.name!==r.svc?' · '+esc(r.name):'')+' · '+r.qty.toLocaleString('en-US')+'</small></span><em>'+usd2(r.cost)+'</em></div>'});
+  }else{
+    list.forEach(function(x){var pl=planned(x),t=pl.reduce(function(a,r){return a+r.cost},0);total+=t;rows+='<div class="osr"><span><b>'+esc(x.title||'Untitled video')+'</b><small>'+(pl.length?pl.map(function(r){return STAT_NAME[r.s]}).join(', '):'No services picked')+'</small></span><em>'+(pl.length?usd2(t):'—')+'</em></div>'});
+  }
+  openSheet('<h3>'+(single?'Place order':'Order all')+'</h3>'+(single?'<p class="pinfo">'+esc(v.title||'This video')+'</p>':'<p class="pinfo">Every video still running this month.</p>')+'<div class="osl">'+rows+'</div><div class="pk-cost"><span>Total</span><b>'+usd2(total)+'</b></div><button class="btn" id="pay" disabled style="opacity:.45">Pay &amp; place order'+(single?'':'s')+'</button><p class="pinfo" style="text-align:center;margin-top:-4px">Placing orders unlocks once your panels are connected.</p>'+(single?'<button class="btn alt" id="chg">Change services</button>':'')+'<button class="btn alt" id="x">Close</button>');
+  if(single)document.getElementById('chg').onclick=function(){logWizard(v,function(s,res){return otApi.setStat(v,s,res)})};
+  document.getElementById('x').onclick=closeSheet;
 }
 
 /* ---------- Members (owner only) ---------- */
