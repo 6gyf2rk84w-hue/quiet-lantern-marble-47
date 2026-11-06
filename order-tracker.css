@@ -196,3 +196,9 @@ span.ot-side{visibility:hidden}
 .ot .ot-sg small{font-size:12px;font-weight:700;color:var(--ot-soft)}
 .ot button.ot-sg:active{transform:scale(.97)}
 .ot .ot-sg.hit{border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:var(--ot-soft)}
+/* the month is the big title: tap it for the month list */
+.ot .ot-mt{display:inline-flex;align-items:center;gap:6px;border:0;background:none;padding:2px 0;color:#fff;font:800 36px/1.05 var(--ot-display);letter-spacing:-.025em}
+.ot .ot-mt svg{width:26px;height:26px;fill:none;stroke:rgba(255,255,255,.7);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;margin-top:4px}
+.ot .ot-mt:active{opacity:.7}
+.ot .ot-archtag{margin-right:auto;font-weight:800;font-size:13px;color:var(--ot-soft);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:4px 10px}
+.ot .ot-top .ot-mt + .ot-ref{margin-left:auto}

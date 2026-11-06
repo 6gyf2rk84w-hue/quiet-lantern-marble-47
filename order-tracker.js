@@ -31,6 +31,9 @@
  *   onLogged(o, setStat) — runs after a video is logged; setStat(stat, {qty, plan} | null)
  *   confirm(what, go) — host asks "are you sure?" before a delete, then calls go()
  *   linkPlaceholder: string — grey example text in the link box
+ *   monthTitle: true — the month name is the big title (tap → onMonthPick()); no month switch or Archive list.
+ *             Months stay open until archived(month) is true (anything older than last month is archived).
+ *             API: setMonth(m), resetMonth(), months() → [{m, name, archived, count, views}], month
  */
 (function (global) {
   "use strict";
@@ -145,7 +148,12 @@
       st.busy = false; await save(); draw(); if (!quiet) toast("All up to date!");
     }
     const prevMonth = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return monthKey(d); };
-    const shownMonths = () => { const cur = monthKey(Date.now()), pm = prevMonth(); return vis().some(o => o.month === pm) ? [pm, cur] : [cur]; };
+    const MT = !!opt.monthTitle;
+    const isArch = m => { const cur = monthKey(Date.now()); if (m >= cur) return false; if (m < prevMonth()) return true;
+      try { return !!(opt.archived && opt.archived(m)); } catch (e) { return false; } };
+    const allMonths = () => [...new Set(vis().map(o => o.month).filter(Boolean).concat([monthKey(Date.now())]))].sort();
+    const openMonths = () => allMonths().filter(m => !isArch(m));
+    const shownMonths = () => { if (MT) return allMonths(); const cur = monthKey(Date.now()), pm = prevMonth(); return vis().some(o => o.month === pm) ? [pm, cur] : [cur]; };
 
     // ---- drawing --------------------------------------------------------------
     function barRow(o, s, label, S) {
@@ -206,12 +214,15 @@
     }
     const people = () => { try { return (opt.people && opt.people()) || []; } catch (e) { return []; } };
     function draw() {
-      const now = Date.now(), months = shownMonths(); if (!months.includes(st.month)) st.month = months[months.length - 1];
+      const now = Date.now(), months = shownMonths();
+      if (MT && (!st.picked || !months.includes(st.month))) { st.month = openMonths()[0]; st.picked = false; }
+      else if (!months.includes(st.month)) st.month = months[months.length - 1];
       const cur = monthKey(now), mine = vis().filter(o => o.month === st.month).sort((a, b) => a.postedAt - b.postedAt);
       const live = mine.filter(o => !finished(o, now)), fin = mine.filter(o => finished(o, now));
       const total = mine.reduce((t, o) => t + value(o), 0), dl = showDeal() ? dealOf(st.month) : null, left = dl ? Math.max(0, (+dl.count || 0) - ownIn(st.month).length) : 0;
-      const arch = [...new Set(vis().map(o => o.month).filter(m => !months.includes(m)))].sort().reverse();
-      let h = `<div class="ot-top"><div class="ot-seg">${months.map(m => `<button type="button" data-ot-m="${m}" aria-pressed="${m === st.month}">${monthName(m)}</button>`).join("")}</div>
+      const arch = MT ? [] : [...new Set(vis().map(o => o.month).filter(m => !months.includes(m)))].sort().reverse();
+      let h = `<div class="ot-top">${MT ? `<button class="ot-mt" type="button" data-ot-mpick="1" aria-label="Pick a month">${monthName(st.month)}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>${isArch(st.month) ? `<span class="ot-archtag">Archived</span>` : ""}`
+          : `<div class="ot-seg">${months.map(m => `<button type="button" data-ot-m="${m}" aria-pressed="${m === st.month}">${monthName(m)}</button>`).join("")}</div>`}
         <button class="ot-ref ${st.busy ? "spin" : ""}" type="button" data-ot-ref="1"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>Refresh</button></div>
         ${people().length > 2 ? `<div class="ot-who">${people().map(x => `<button type="button" data-ot-who="${x.id == null ? "" : esc(x.id)}" aria-pressed="${(x.id || null) === st.who}">${esc(x.label)}</button>`).join("")}</div>` : ""}
         ${showDeal() ? dealCard(cur) : ""}
@@ -235,10 +246,11 @@
 
     // ---- taps -----------------------------------------------------------------
     root.addEventListener("click", async e => {
-      const b = e.target.closest("[data-ot-sug],[data-ot-m],[data-ot-ref],[data-ot-edit],[data-ot-save],[data-ot-del],[data-ot-copy],[data-ot-bot],[data-ot-mark],[data-ot-x],[data-ot-open],[data-ot-arch],[data-ot-pick],[data-ot-focus],[data-ot-who],[data-ot-deal],[data-ot-add],[data-ot-order],[data-ot-orderall]");
+      const b = e.target.closest("[data-ot-mpick],[data-ot-sug],[data-ot-m],[data-ot-ref],[data-ot-edit],[data-ot-save],[data-ot-del],[data-ot-copy],[data-ot-bot],[data-ot-mark],[data-ot-x],[data-ot-open],[data-ot-arch],[data-ot-pick],[data-ot-focus],[data-ot-who],[data-ot-deal],[data-ot-add],[data-ot-order],[data-ot-orderall]");
       if (!b) return; const d = b.dataset;
       if (d.otX && e.target !== b) return;
       if (d.otPick && e.target.closest("[data-ot-bot]")) return;
+      if (d.otMpick) { if (opt.onMonthPick) opt.onMonthPick(); return; }
       if (d.otSug) { const [id, v] = d.otSug.split("|"), o = st.orders.find(x => x.id === id); if (!o || RO) return;
         o.goals = o.goals || {}; o.goals.views = +v; fillFrom(o); await save(); draw(); toast("Views goal set · the rest filled in"); return; }
       if (d.otOrder) { const o = st.orders.find(x => x.id === d.otOrder); if (o && opt.onOrder && !RO) opt.onOrder(o); return; }
@@ -292,7 +304,11 @@
     const redraw = setInterval(() => { if (!document.hidden && !st.adding && !root.querySelector("input:focus")) draw(); }, 60e3); // stall colors move with time
     async function reload() { if (st.edit || st.ask || st.adding || root.querySelector("input:focus")) return;
       try { const o = await store.load(); if (Array.isArray(o)) { st.orders = o; draw(); } } catch (e) {} }
-    return { refresh: () => refresh(false), reload, redraw: () => draw(), setStat, destroy() { clearInterval(tick); clearInterval(redraw); root.innerHTML = ""; root.classList.remove("ot"); }, get orders() { return st.orders; } };
+    const monthsInfo = () => allMonths().slice().reverse().map(m => { const a = vis().filter(o => o.month === m);
+      return { m, name: monthName(m), archived: isArch(m), count: a.length, views: a.reduce((t, o) => t + real(o, "views"), 0) }; });
+    return { refresh: () => refresh(false), reload, redraw: () => draw(), setStat, months: monthsInfo,
+      setMonth(m) { st.month = m; st.picked = true; st.open = null; st.edit = null; draw(); window.scrollTo(0, 0); },
+      resetMonth() { st.picked = false; st.open = null; draw(); }, get month() { return st.month; }, destroy() { clearInterval(tick); clearInterval(redraw); root.innerHTML = ""; root.classList.remove("ot"); }, get orders() { return st.orders; } };
   }
 
   global.OrderTracker = { mount, cleanLink };

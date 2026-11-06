@@ -264,6 +264,25 @@ input,textarea,select{font-size:max(16px,1em)!important}
 .pk-cost{display:flex;justify-content:space-between;align-items:baseline;margin:2px 0 8px;font-size:15px;color:var(--mute)}
 .pk-cost b{font-size:22px;color:var(--ok)}
 .pk-none{color:var(--mute);font-size:14.5px;padding:10px 2px 14px;line-height:1.45}
+/* top toggle: Orders | Stats | Panels */
+.ohead{display:flex;align-items:center;gap:10px;text-align:left;padding:14px 16px 0}
+.ohead .omore{position:static;flex:0 0 auto}
+.stabs{--n:2;--k:0;position:relative;flex:1;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;padding:5px;border-radius:999px;background:rgba(255,255,255,.09);max-width:460px;margin:0 auto}
+.stabs[hidden]{display:none}
+.stabs>i{position:absolute;top:5px;bottom:5px;left:5px;width:calc((100% - 10px) / var(--n));border-radius:999px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.25);transform:translateX(calc(var(--k) * 100%));transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+.stabs.still>i{transition:none}
+.stabs button{position:relative;z-index:1;height:44px;border:0;background:none;color:rgba(255,255,255,.62);font:800 17px/1 "Geist",system-ui,sans-serif;transition:color .25s}
+.stabs button.on{color:#0B1A26}
+.ptabs{margin:10px auto 0}
+/* month list */
+.mrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:13px 14px;margin-bottom:8px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:#fff}
+.mrow.on{border-color:#1BE07F;background:rgba(27,224,127,.1)}
+.mrow b{font-size:18px}
+.mrow small{margin-left:auto;color:var(--mute);font-size:14px;font-weight:600}
+.mrow .mchk{color:#1BE07F;font-weight:900}
+.mhd{font-weight:800;font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin:14px 2px 8px}
+.smt{display:inline-flex;align-items:center;gap:6px;border:0;background:none;padding:2px 0;margin:0 0 12px;color:#fff;font:800 36px/1.05 "Bricolage Grotesque","Arial Black",system-ui,sans-serif;letter-spacing:-.025em}
+.smt svg{width:26px;height:26px;fill:none;stroke:rgba(255,255,255,.7);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;margin-top:4px}
 /* Stats: CPM goals */
 #sscreen{min-height:100vh}
 #statsroot{max-width:640px;margin:0 auto;padding:14px 16px 40px}
@@ -294,12 +313,12 @@ input,textarea,select{font-size:max(16px,1em)!important}
 </style>
 </head>
 <body class="ot-on">
-<div id="oscreen" class="scr"><div class="ohead"><button class="omore" data-more="1" aria-label="More">&#8943;</button><h1>Orders Tracker</h1><div class="dots"></div></div><div id="otnote"><div>Orders are saved on this phone only for now. One quick setup step in Supabase will sync them for everyone.</div></div><div id="setup" style="display:none"></div><div id="otroot"></div></div>
-<div id="sscreen" class="scr" style="display:none"><div class="ohead"><button class="omore" data-more="1" aria-label="More">&#8943;</button><h1>Stats</h1><div class="dots"></div></div><div id="statsroot"></div></div>
+<div id="oscreen" class="scr"><div class="ohead"><div class="stabs"></div><button class="omore" data-more="1" aria-label="More">&#8943;</button></div><div id="otnote"><div>Orders are saved on this phone only for now. One quick setup step in Supabase will sync them for everyone.</div></div><div id="setup" style="display:none"></div><div id="otroot"></div></div>
+<div id="sscreen" class="scr" style="display:none"><div class="ohead"><div class="stabs"></div><button class="omore" data-more="1" aria-label="More">&#8943;</button></div><div id="statsroot"></div></div>
 <div id="pscreen" class="scr" style="display:none">
 <div id="top">
   <div class="hrow"><button id="back" data-back="1" aria-label="Back">&#8592;</button><div class="tw"><h1 id="ttl">Panel Tracker</h1><div id="crumb"></div></div><button id="pen" data-pen="1" aria-label="Edit mode">&#9998;</button><button id="more" data-more="1" aria-label="More">&#8943;</button></div>
-  <div class="dots"></div>
+  <div class="stabs ptabs"></div>
   <div id="tabs"></div>
 </div>
 <div id="main"><div class="empty">Loading...</div></div>
@@ -765,6 +784,7 @@ function mountOrders(){
     onPick:function(o,s,done){pickService(o,s,done)},
     deal:dealFor,onDeal:editDeal,noDealPrompt:setupShown,
     rates:gRates,suggest:suggestFor,
+    monthTitle:true,archived:isArchived,onMonthPick:pickMonth,
     onOrder:function(o){orderSheet([o],true)},onOrderAll:function(l){orderEverything(l)},
     preview:canVideos()&&IG.sql?{fetch:function(link,o){return igPreview(o)}}:null,
     beforeRefresh:function(){return igSync(false)},
@@ -840,7 +860,7 @@ function logWizard(v,setStat){
 
 /* ---------- Monthly deal ---------- */
 function monthNow(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
-function dealFor(m){var ds=(user&&user.user_metadata&&user.user_metadata.deals)||{};var ks=Object.keys(ds).filter(function(k){return k<=m}).sort();return ks.length?ds[ks[ks.length-1]]:null}
+function dealFor(m){var ds=(user&&user.user_metadata&&user.user_metadata.deals)||{};var all=Object.keys(ds).sort(),ks=all.filter(function(k){return k<=m});return ks.length?ds[ks[ks.length-1]]:all.length?ds[all[0]]:null}
 function editDeal(){
   if(!canVideos())return;
   var d=dealFor(monthNow())||{per:'',cut:20,count:''};
@@ -936,17 +956,17 @@ function suggestFor(o,list){
 }
 
 /* ---------- CPM goal (dollars per 1,000 real views), per month, carried into the months after ---------- */
-function cpmFor(m){var c=(user&&user.user_metadata&&user.user_metadata.cpm)||{};var ks=Object.keys(c).filter(function(k){return k<=m&&+c[k]>0}).sort();return ks.length?+c[ks[ks.length-1]]:null}
+function cpmFor(m){var c=(user&&user.user_metadata&&user.user_metadata.cpm)||{};var all=Object.keys(c).filter(function(k){return +c[k]>0}).sort(),ks=all.filter(function(k){return k<=m});return ks.length?+c[ks[ks.length-1]]:all.length?+c[all[0]]:null}
 function payFor(d){return d?(+d.per||0)*(+d.count||0):0}     // the deal on paper: before the agency cut
 function needFor(pay,c){return c>0?pay/c*1000:0}
 function gfmt(n){n=+n||0;var a=Math.abs(n);if(a>=1e6)return (n/1e6).toFixed(a>=1e7?1:2).replace(/\.?0+$/,'')+'M';if(a>=1e4)return Math.round(n/1e3)+'K';if(a>=1e3)return (n/1e3).toFixed(1).replace(/\.0$/,'')+'K';return String(Math.round(n))}
 function gcash(v){return '$'+(Math.round(v*100)/100).toLocaleString('en-US',{maximumFractionDigits:2})}
 function cpmTxt(v,dp){if(dp===2)return '$'+(+v).toFixed(2);return '$'+(v>=100?Math.round(v).toLocaleString('en-US'):v>=10?v.toFixed(1):v.toFixed(2))}
-function editCpm(){
+function editCpm(mm){
   if(!canVideos())return;
-  var d=dealFor(monthNow());if(!d){toast('Set your monthly deal first.');editDeal();return}
-  var c=cpmFor(monthNow()),pay=payFor(d);
-  openSheet('<h3>CPM goal</h3><div class="pinfo">Dollars per 1,000 real views you want this month. Your deal is '+gcash(pay)+' on paper ('+(+d.count)+' videos × '+gcash(+d.per)+').</div><label class="fl2" for="cpmi">CPM goal ($)</label><input type="text" id="cpmi" inputmode="decimal" placeholder="3.00" autocomplete="off"><div class="pk-cost" id="csum"></div><div class="perr" id="cerr"></div><button class="btn" id="ok">Save goal</button><button class="btn alt" id="x">Cancel</button>');
+  var m=typeof mm==='string'?mm:monthNow(),d=dealFor(m);if(!d){toast('Set your monthly deal first.');editDeal();return}
+  var c=cpmFor(m),pay=payFor(d);
+  openSheet('<h3>CPM goal'+(m!==monthNow()?' · '+esc(mName(m)):'')+'</h3><div class="pinfo">Dollars per 1,000 real views you want '+(m===monthNow()?'this month':'for '+esc(mName(m)))+'. Your deal is '+gcash(pay)+' on paper ('+(+d.count)+' videos × '+gcash(+d.per)+').</div><label class="fl2" for="cpmi">CPM goal ($)</label><input type="text" id="cpmi" inputmode="decimal" placeholder="3.00" autocomplete="off"><div class="pk-cost" id="csum"></div><div class="perr" id="cerr"></div><button class="btn" id="ok">Save goal</button><button class="btn alt" id="x">Cancel</button>');
   var I=document.getElementById('cpmi');I.value=c?(+c).toFixed(2):'';
   function val(){return parseFloat(String(I.value).replace(/[^0-9.]/g,''))}
   function sum(){var v=val();document.getElementById('csum').innerHTML=v>0?'<span>Needs this month</span><b>'+gfmt(needFor(pay,v))+' views</b>':'<span>Type a CPM to see the views you need</span><b></b>'}
@@ -955,7 +975,7 @@ function editCpm(){
   document.getElementById('ok').onclick=async function(){
     var v=val(),e=document.getElementById('cerr');e.textContent='';
     if(!(v>0&&v<=1000)){e.textContent='Type a CPM goal, like 3 for $3.00.';return}
-    var cp=Object.assign({},(user.user_metadata&&user.user_metadata.cpm)||{});cp[monthNow()]=Math.round(v*100)/100;
+    var cp=Object.assign({},(user.user_metadata&&user.user_metadata.cpm)||{});cp[m]=Math.round(v*100)/100;
     var b=document.getElementById('ok');b.disabled=true;b.textContent='Saving...';
     var r=await sb.auth.updateUser({data:{cpm:cp}});
     if(r.error){b.disabled=false;b.textContent='Save goal';e.textContent=r.error.message;return}
@@ -974,8 +994,8 @@ function gTrack(frac,views,cur,ticks,labs){
 function paintStats(anim){
   var el=document.getElementById('statsroot');if(!el)return;
   if(!user||!canVideos()){el.innerHTML='';return}
-  var m=monthNow(),d=dealFor(m);
-  if(!d){el.innerHTML='<div class="gbox"><div class="gempty"><b>Set your monthly deal first</b><span>Your CPM goals come from it.</span><button class="btn" data-gdeal="1">Set monthly deal</button></div></div>';return}
+  var m=statsMonth(),d=dealFor(m),ttl='<button class="smt" data-gmonth="1" aria-label="Pick a month">'+esc(mName(m))+'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>';
+  if(!d){el.innerHTML=ttl+'<div class="gbox"><div class="gempty"><b>Set your monthly deal first</b><span>Your CPM goals come from it.</span><button class="btn" data-gdeal="1">Set monthly deal</button></div></div>';return}
   var pay=payFor(d),views=ownViews(m),cur=views>0?pay/views*1000:null,c=cpmFor(m),h;
   if(gTab==='all'){
     var T=[5,4,3,2,1].map(function(t){return {t:t,v:pay/t*1000}}),stops=[0].concat(T.map(function(x){return x.v})),f=1;
@@ -989,7 +1009,7 @@ function paintStats(anim){
     h='<div class="gmh"><div><div class="gcpm">🎯 '+cpmTxt(c,2)+' CPM</div><div class="gneed">needs '+gfmt(need)+' real views</div></div><button class="gchg" data-gcpm="1">✏️ Change</button></div>'+
       gTrack(views/need,views,cur,[1],[{p:1,t:cpmTxt(c,2),s:gfmt(need)}]);
   }
-  el.innerHTML='<div class="gbox"><div class="gtabs"><button data-gtab="all"'+(gTab==='all'?' class="on"':'')+'>All goals</button><button data-gtab="mine"'+(gTab==='mine'?' class="on"':'')+'>🎯 My goal</button></div>'+h+'</div>';
+  el.innerHTML=ttl+'<div class="gbox"><div class="gtabs"><button data-gtab="all"'+(gTab==='all'?' class="on"':'')+'>All goals</button><button data-gtab="mine"'+(gTab==='mine'?' class="on"':'')+'>🎯 My goal</button></div>'+h+'</div>';
   var t=el.querySelector('.gtrk');if(!t)return;
   var fill=t.querySelector('.gfill'),bub=t.querySelector('.gbub'),W=t.querySelector('.gbar').offsetWidth,fr=+t.dataset.frac;
   var px=Math.max(t.dataset.some==='1'?22:0,Math.round(fr*W)),bw=bub.offsetWidth,left=Math.max(0,Math.min(W-bw,px-40));
@@ -997,11 +1017,38 @@ function paintStats(anim){
   if(anim){fill.style.width='0px';requestAnimationFrame(function(){requestAnimationFrame(function(){fill.style.width=px+'px'})})}else{fill.style.transition='none';fill.style.width=px+'px'}
 }
 document.getElementById('statsroot').addEventListener('click',function(e){
-  var b=e.target.closest('[data-gtab],[data-gcpm],[data-gdeal]');if(!b)return;
+  var b=e.target.closest('[data-gtab],[data-gcpm],[data-gdeal],[data-gmonth]');if(!b)return;
   if(b.dataset.gtab){if(gTab!==b.dataset.gtab){gTab=b.dataset.gtab;paintStats(true)}}
-  else if(b.dataset.gcpm)editCpm();else if(b.dataset.gdeal)editDeal();
+  else if(b.dataset.gcpm)editCpm(statsMonth());else if(b.dataset.gdeal)editDeal();else if(b.dataset.gmonth)pickMonth();
 });
 window.addEventListener('resize',function(){if(scr==='stats')paintStats()});
+
+/* ---------- Months: tap the title for the list; archive last month once its orders are done ---------- */
+function mName(m){var y=+m.slice(0,4),k=+m.slice(5,7);return new Date(y,k-1,1).toLocaleString('en-US',{month:'long'})+(y!==new Date().getFullYear()?' '+y:'')}
+function statsMonth(){return otApi&&otApi.month?otApi.month:monthNow()}
+function isArchived(m){var a=(user&&user.user_metadata&&user.user_metadata.archived)||{};return !!a[m]}
+function pickMonth(){
+  if(!otApi)return;
+  var L=otApi.months(),cur=otApi.month,open=L.filter(function(x){return !x.archived}),arc=L.filter(function(x){return x.archived});
+  var old=open.filter(function(x){return x.m<monthNow()}),a=canVideos()&&old.length?old[old.length-1]:null;
+  function row(x){return '<button class="mrow'+(x.m===cur?' on':'')+'" data-mp="'+x.m+'">'+(x.m===cur?'<span class="mchk">✓</span>':'')+'<b>'+esc(x.name)+'</b><small>'+gfmt(x.views)+' views · '+x.count+' '+(x.count===1?'video':'videos')+'</small></button>'}
+  openSheet('<h3>Months</h3><div id="mlist">'+open.map(row).join('')+(arc.length?'<div class="mhd">Archive</div>'+arc.map(row).join(''):'')+'</div>'+
+    (a?'<button class="btn alt" id="marc">Archive '+esc(a.name)+'</button>':'')+'<button class="btn alt" id="x">Close</button>');
+  document.getElementById('mlist').onclick=function(e){var b=e.target.closest('[data-mp]');if(!b)return;closeSheet();otApi.setMonth(b.dataset.mp);if(scr==='stats')paintStats(true)};
+  document.getElementById('x').onclick=closeSheet;
+  if(a)document.getElementById('marc').onclick=function(){archiveMonth(a)};
+}
+function archiveMonth(a){
+  openSheet('<h3>Archive '+esc(a.name)+'?</h3><div class="pinfo">Do this once '+esc(a.name)+'’s orders are done. Its videos move into the archive, and you can still open them from the month list.</div><button class="btn" id="ok">Archive '+esc(a.name)+'</button><button class="btn alt" id="x">Cancel</button>');
+  document.getElementById('x').onclick=closeSheet;
+  document.getElementById('ok').onclick=async function(){
+    var b=document.getElementById('ok');b.disabled=true;b.textContent='Saving...';
+    var ar=Object.assign({},(user.user_metadata&&user.user_metadata.archived)||{});ar[a.m]=true;
+    var r=await sb.auth.updateUser({data:{archived:ar}});
+    if(r.error){b.disabled=false;b.textContent='Archive '+a.name;toast(r.error.message);return}
+    if(r.data&&r.data.user)user=r.data.user;closeSheet();if(otApi)otApi.resetMonth();paintStats(true);toast(a.name+' archived.',true);
+  };
+}
 
 /* ---------- Instagram + auto-log ---------- */
 var IG={sql:false,acct:null};
@@ -1276,13 +1323,22 @@ var scr='orders',sw=null,swUntil=0,scrY={orders:0,stats:0,panels:0};
 var SCR_NAME={orders:'Orders Tracker',stats:'Stats',panels:'Panels Tracker'};
 function screens(){var l=['orders'];if(user&&canVideos())l.push('stats');if(user&&canPanels())l.push('panels');return l}
 function scrEl(n){return document.getElementById(n==='orders'?'oscreen':n==='stats'?'sscreen':'pscreen')}
-function paintDots(){var l=screens();document.querySelectorAll('.dots').forEach(function(d){d.innerHTML=l.map(function(n){return '<button data-scr="'+n+'" aria-label="'+SCR_NAME[n]+'"'+(n===scr?' class="on"':'')+'></button>'}).join('');d.style.display=l.length>1?'flex':'none'})}
+var TAB_NAME={orders:'Orders',stats:'Stats',panels:'Panels'};
+function paintDots(from){var l=screens(),k=l.indexOf(scr),key=l.join(',');
+  document.querySelectorAll('.stabs').forEach(function(d){
+    if(d.dataset.key!==key){d.dataset.key=key;d.style.setProperty('--n',l.length);d.innerHTML='<i></i>'+l.map(function(n){return '<button data-scr="'+n+'" aria-label="'+SCR_NAME[n]+'">'+TAB_NAME[n]+'</button>'}).join('')}
+    d.hidden=l.length<2;
+    d.querySelectorAll('button').forEach(function(b){b.classList.toggle('on',b.dataset.scr===scr)});
+    var f=l.indexOf(from);
+    if(f>=0&&f!==k){d.classList.add('still');d.style.setProperty('--k',f);void d.offsetWidth;d.classList.remove('still')}
+    d.style.setProperty('--k',Math.max(0,k));
+  })}
 function setScreen(n,dir){
   var l=screens();if(n===scr||l.indexOf(n)<0)return;
   var from=scrEl(scr),to=scrEl(n);scrY[scr]=window.scrollY;
   from.style.display='none';from.style.transform='';from.style.opacity='';
   var was=scr;scr=n;to.style.display='block';document.body.classList.toggle('ot-on',n!=='panels');if(n==='stats')paintStats(true);
-  document.getElementById('menu').classList.remove('on');paintDots();window.scrollTo(0,scrY[n]||0);
+  document.getElementById('menu').classList.remove('on');paintDots(was);window.scrollTo(0,scrY[n]||0);
   if(dir==null)dir=l.indexOf(n)>l.indexOf(was)?1:-1;
   try{to.animate([{transform:'translateX('+(dir*36)+'%)',opacity:.3},{transform:'none',opacity:1}],{duration:260,easing:'cubic-bezier(.2,.8,.2,1)'})}catch(e){}
 }
