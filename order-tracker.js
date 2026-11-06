@@ -182,8 +182,7 @@
         <div class="ot-views"${RO ? "" : ` data-ot-pick="${esc(o.id)}|views"`}>${num(real(o, "views"))}<span class="g"> / ${vg ? fmt(vg) : "---"}</span><small>views</small>${vS === "g" ? `<span class="ot-chk">✓</span>` : ""}${planOf(o, "views") ? `<em class="ot-plan">${esc(planText(planOf(o, "views")))} · ${usd(statValue(o, "views"))}</em>` : ""}</div>
         ${vg && vS !== "g" ? barRow(o, "views", "Views", vS) : ""}
         ${sugTag(o)}
-        <div class="ot-mid">${o.link ? `<button class="ot-side ot-copy" type="button" data-ot-copy="${esc(o.link)}">🔗<span>Copy link</span></button>` : `<span class="ot-side"></span>`}
-          ${o.link ? `<a class="ot-thumb" href="${esc(o.link)}" target="_blank" rel="noopener" style="${o.thumb ? `background-image:url('${esc(o.thumb)}')` : ""}" aria-label="Open the post"></a>` : `<span class="ot-thumb"></span>`}
+        <div class="ot-mid">${o.link ? `<a class="ot-thumb" href="${esc(o.link)}" target="_blank" rel="noopener" style="${o.thumb ? `background-image:url('${esc(o.thumb)}')` : ""}" aria-label="Open the post"></a>` : `<span class="ot-thumb"></span>`}
           ${!RO && opt.onOrder ? `<button class="ot-side ot-order" type="button" data-ot-order="${esc(o.id)}">🛒<span>Place order</span></button>` : `<span class="ot-side"></span>`}</div>
         <div class="ot-stats">${STATS.slice(1).map(([s, lb, ic]) => statCard(o, s, lb, ic, now)).join("")}</div>
         ${!RO && opt.onPick && STATS.some(([s]) => !goal(o, s)) ? `<div class="ot-adds">${STATS.filter(([s]) => !goal(o, s)).map(([s, lb, ic]) => `<button class="ot-add" type="button" data-ot-pick="${esc(o.id)}|${s}">+ ${icon(s, 18) || ic} ${lb}</button>`).join("")}</div>` : ""}

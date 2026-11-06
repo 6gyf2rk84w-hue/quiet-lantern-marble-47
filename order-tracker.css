@@ -223,3 +223,9 @@ span.ot-side{visibility:hidden}
 .ot .ot-key span{display:inline-flex;align-items:center;gap:5px}
 .ot .ot-key i{width:7px;height:7px;border-radius:50%}
 .ot .ot-key .k-g{background:var(--ot-green)}.ot .ot-key .k-y{background:var(--ot-yellow)}.ot .ot-key .k-r{background:var(--ot-red)}
+/* bigger preview fills the left and middle; Place order on the right */
+.ot .ot-mid{grid-template-columns:2fr 1fr;align-items:stretch}
+.ot .ot-thumb{width:auto;height:190px;border-radius:16px}
+.ot .ot-mid .ot-side{min-height:0}
+.ot .ot-mid .ot-order{font-size:26px;gap:8px}
+.ot .ot-mid .ot-order span{font-size:15px}
