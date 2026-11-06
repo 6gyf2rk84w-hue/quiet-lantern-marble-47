@@ -223,11 +223,11 @@
       const arch = MT ? [] : [...new Set(vis().map(o => o.month).filter(m => !months.includes(m)))].sort().reverse();
       let h = `<div class="ot-top">${MT ? `<button class="ot-mt" type="button" data-ot-mpick="1" aria-label="Pick a month">${monthName(st.month)}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>${isArch(st.month) ? `<span class="ot-archtag">Archived</span>` : ""}`
           : `<div class="ot-seg">${months.map(m => `<button type="button" data-ot-m="${m}" aria-pressed="${m === st.month}">${monthName(m)}</button>`).join("")}</div>`}
-        <button class="ot-ref ${st.busy ? "spin" : ""}" type="button" data-ot-ref="1"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>Refresh</button></div>
+        <button class="ot-ref ${st.busy ? "spin" : ""}" type="button" data-ot-ref="1" aria-label="Refresh"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg></button></div>
         ${people().length > 2 ? `<div class="ot-who">${people().map(x => `<button type="button" data-ot-who="${x.id == null ? "" : esc(x.id)}" aria-pressed="${(x.id || null) === st.who}">${esc(x.label)}</button>`).join("")}</div>` : ""}
         ${showDeal() ? dealCard(cur) : ""}
-        <div class="ot-grand"><div><span class="lb">Grand total · ${monthName(st.month)}</span><b>${usd(total)}</b></div>${!RO && opt.onOrderAll && live.length ? `<button class="ot-orderall" type="button" data-ot-orderall="1">Order everything</button>` : ""}</div>
-        <div class="ot-key"><span>🟢 In progress</span><span>🟡 Stalling</span><span>🔴 Needs review</span></div>`;
+        <div class="ot-grand"><div><span class="lb">Grand total</span><b>${usd(total)}</b></div>${!RO && opt.onOrderAll && live.length ? `<button class="ot-orderall" type="button" data-ot-orderall="1">Order everything</button>` : ""}</div>
+        <div class="ot-key"><span><i class="k-g"></i>In progress</span><span><i class="k-y"></i>Stalling</span><span><i class="k-r"></i>Needs review</span></div>`;
       const canAdd = st.month === cur && !RO;
       h += live.length ? live.map(o => card(o, mine.indexOf(o) + 1, now)).join("") : (canAdd ? "" : `<div class="ot-empty">No ${esc(L.orders)} yet for ${monthName(st.month)}.</div>`);
       if (canAdd) h += `<div class="ot-manual"><span>Already posted? Log it here.</span><button class="ot-mbtn" type="button" data-ot-add="1">Manual log</button></div>`;

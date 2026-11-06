@@ -202,3 +202,24 @@ span.ot-side{visibility:hidden}
 .ot .ot-mt:active{opacity:.7}
 .ot .ot-archtag{margin-right:auto;font-weight:800;font-size:13px;color:var(--ot-soft);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:4px 10px}
 .ot .ot-top .ot-mt + .ot-ref{margin-left:auto}
+/* calmer top: round Refresh, slim deal card, plain grand total, small key */
+.ot .ot-ref{width:44px;height:44px;padding:0;justify-content:center;background:rgba(27,224,127,.14);border:1.5px solid rgba(27,224,127,.5);color:var(--ot-green)}
+.ot .ot-ref svg{width:20px;height:20px}
+.ot .ot-deal{gap:8px;padding:13px 16px 12px;border-radius:20px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);box-shadow:none}
+.ot .ot-dnums{align-items:baseline}
+.ot .ot-dnums>div{display:flex;align-items:baseline;gap:6px}
+.ot .ot-dnums .r{justify-content:flex-end}
+.ot .ot-dnums b{display:inline;font-size:24px}
+.ot .ot-dnums small{display:inline;font-size:13.5px;margin:0}
+.ot .ot-segs{order:2;gap:4px}
+.ot .ot-segs i{height:6px}
+.ot .ot-segs.many i{height:5px}
+.ot .ot-segs i.on{box-shadow:0 0 8px rgba(107,227,141,.55)}
+.ot .ot-dline{order:3;font-size:13px;font-weight:700;color:rgba(255,255,255,.55)}
+.ot .ot-grand .lb{font-size:14px}
+.ot .ot-grand b{font-size:28px}
+.ot .ot-orderall{padding:10px 16px;font-size:14.5px}
+.ot .ot-key{justify-content:flex-start;gap:4px 14px;font-size:12.5px;font-weight:700;color:rgba(255,255,255,.55)}
+.ot .ot-key span{display:inline-flex;align-items:center;gap:5px}
+.ot .ot-key i{width:7px;height:7px;border-radius:50%}
+.ot .ot-key .k-g{background:var(--ot-green)}.ot .ot-key .k-y{background:var(--ot-yellow)}.ot .ot-key .k-r{background:var(--ot-red)}
