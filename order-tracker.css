@@ -229,3 +229,6 @@ span.ot-side{visibility:hidden}
 .ot .ot-mid .ot-side{min-height:0}
 .ot .ot-mid .ot-order{font-size:26px;gap:8px}
 .ot .ot-mid .ot-order span{font-size:15px}
+/* the whole thumbnail, uncropped, at its own shape; Place order beside it */
+.ot .ot-mid{grid-template-columns:auto 1fr}
+.ot .ot-thumb{height:200px;width:auto;aspect-ratio:9/16;background-size:contain;background-color:#101C25}

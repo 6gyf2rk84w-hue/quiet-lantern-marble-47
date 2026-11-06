@@ -264,6 +264,14 @@ input,textarea,select{font-size:max(16px,1em)!important}
 .pk-cost{display:flex;justify-content:space-between;align-items:baseline;margin:2px 0 8px;font-size:15px;color:var(--mute)}
 .pk-cost b{font-size:22px;color:var(--ok)}
 .pk-none{color:var(--mute);font-size:14.5px;padding:10px 2px 14px;line-height:1.45}
+/* shared top bar: stays put while the screens below slide */
+#topbar{position:sticky;top:0;z-index:30;background:rgba(11,26,38,.94);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px}
+.tbi{display:flex;align-items:center;gap:10px;max-width:640px;margin:0 auto;height:54px}
+.tbi .omore{position:static;flex:0 0 auto}
+#top{top:calc(env(safe-area-inset-top,0px) + 74px)}
+#menu{top:calc(env(safe-area-inset-top,0px) + 72px)!important}
+#pdone{margin-left:auto;flex:none;height:40px;padding:0 16px;border-radius:999px;border:0;background:#1BE07F;color:#06210F;font-weight:800;font-size:15px;align-items:center}
+#statsroot{padding-top:14px}
 /* top toggle: Orders | Stats | Panels */
 .ohead{display:flex;align-items:center;gap:10px;text-align:left;padding:14px 16px 0}
 .ohead .omore{position:static;flex:0 0 auto}
@@ -313,18 +321,18 @@ input,textarea,select{font-size:max(16px,1em)!important}
 </style>
 </head>
 <body class="ot-on">
-<div id="oscreen" class="scr"><div class="ohead"><div class="stabs"></div><button class="omore" data-more="1" aria-label="More">&#8943;</button></div><div id="otnote"><div>Orders are saved on this phone only for now. One quick setup step in Supabase will sync them for everyone.</div></div><div id="setup" style="display:none"></div><div id="otroot"></div></div>
-<div id="sscreen" class="scr" style="display:none"><div class="ohead"><div class="stabs"></div><button class="omore" data-more="1" aria-label="More">&#8943;</button></div><div id="statsroot"></div></div>
+<div id="topbar"><div class="tbi"><div class="stabs"></div><button class="omore" data-more="1" aria-label="More">&#8943;</button></div></div>
+<div id="oscreen" class="scr"><div id="otnote"><div>Orders are saved on this phone only for now. One quick setup step in Supabase will sync them for everyone.</div></div><div id="setup" style="display:none"></div><div id="otroot"></div></div>
+<div id="sscreen" class="scr" style="display:none"><div id="statsroot"></div></div>
 <div id="pscreen" class="scr" style="display:none">
 <div id="top">
-  <div class="hrow"><button id="back" data-back="1" aria-label="Back">&#8592;</button><div class="tw"><h1 id="ttl">Panel Tracker</h1><div id="crumb"></div></div><button id="pen" data-pen="1" aria-label="Edit mode">&#9998;</button><button id="more" data-more="1" aria-label="More">&#8943;</button></div>
-  <div class="stabs ptabs"></div>
+  <div class="hrow"><button id="back" data-back="1" aria-label="Back">&#8592;</button><div class="tw"><h1 id="ttl">Panel Tracker</h1><div id="crumb"></div></div><button id="pdone" data-pen="1" style="display:none">Done</button></div>
   <div id="tabs"></div>
 </div>
 <div id="main"><div class="empty">Loading...</div></div>
 <button id="fab" aria-label="Add">+</button>
 </div>
-<div id="menu"><button class="mi" id="igBtn" data-igset="1" style="display:none">Instagram &amp; auto-log</button><button class="mi" id="credsBtn" data-creds="1">Login credentials</button><button class="mi" id="modsBtn" data-mods="1" style="display:none">Members</button><button data-logout="1">Log out</button></div>
+<div id="menu"><button class="mi" id="modsBtn" data-mods="1" style="display:none">Members</button><button class="mi" id="igBtn" data-igset="1" style="display:none">Connections</button><button class="mi" id="credsBtn" data-creds="1">Login credentials</button><button class="mi" id="penBtn" data-pen="1" style="display:none">Edit mode</button><button id="logoutBtn" data-logout="1">Log out</button></div>
 <div id="mpage"><div class="chead"><button class="cb" data-mclose="1" aria-label="Back">&#8592;</button><h2>Members</h2></div><div id="mbody"></div></div>
 <div id="cpage"><div class="chead"><button class="cb" data-cclose="1" aria-label="Back">&#8592;</button><h2>Logins</h2><button class="btn" id="cadd" data-cadd="1" style="display:none;width:auto;margin:0;padding:10px 14px;font-size:15px">+ Add</button></div><div id="clist"></div></div>
 <div id="veil"><div id="sheet"></div></div>
@@ -393,7 +401,15 @@ function sortAll(){S.nodes.sort(byPos);S.orders.sort(byPos)}
 async function memberRow(){if(!user)return null;var r=await sb.from('members').select('*').eq('user_id',user.id);if(r.error)return {unk:true};return (r.data&&r.data[0])||null}
 async function stillMember(){var m=await memberRow();if(!m)return false;if(m.unk)return true;var nr=m.role||'viewer';if(nr!==role)setRole(nr);return true}
 async function setRole(nr){role=nr;isViewer=!canPanels();if(isViewer){editing=false;if(scr==='panels')setScreen('orders')}if(scr==='stats'&&!canVideos())setScreen('orders');applyRole();render();await loadIg();mountOrders();paintSetup();loadEngine()}
-function applyRole(){var p=canPanels();document.getElementById('pen').style.display=p?'flex':'none';document.getElementById('credsBtn').style.display=p?'block':'none';document.getElementById('modsBtn').style.display=isAdmin?'block':'none';document.getElementById('igBtn').style.display=canVideos()?'block':'none';paintDots()}
+function applyRole(){paintMenu();paintDots()}
+// ⋯ menu, top to bottom — owner: Members, Connections, Login credentials, Edit mode · mods: Login credentials, Connections, Edit mode · users: Connections · Log out last
+function paintMenu(){
+  var mn=document.getElementById('menu'),ids=['modsBtn','igBtn','credsBtn','penBtn'],order=isAdmin?['modsBtn','igBtn','credsBtn','penBtn']:role==='mod'?['credsBtn','igBtn','penBtn']:canVideos()?['igBtn']:[];
+  ids.forEach(function(id){document.getElementById(id).style.display='none'});
+  order.forEach(function(id){var b=document.getElementById(id);if(id==='penBtn'&&!(scr==='panels'&&canPanels()))return;b.style.display='block';mn.appendChild(b)});
+  mn.appendChild(document.getElementById('logoutBtn'));
+  document.getElementById('penBtn').textContent=editing?'Done editing':'Edit mode';
+}
 function kick(msg){document.getElementById('cpage').classList.remove('on');document.getElementById('mpage').classList.remove('on');if(scr!=='orders')setScreen('orders');role='viewer';MEM=[];isViewer=true;applyRole();var u=user;user=null;isAdmin=false;S={nodes:[],orders:[]};path=[];editing=false;closeSheet();document.getElementById('main').innerHTML='';if(otApi){otApi.destroy();otApi=null}var se=document.getElementById('setup');se.innerHTML='';se.style.display='none';document.getElementById('otroot').style.display='';sb.auth.signOut().catch(function(){});document.getElementById('login').style.display='flex';document.getElementById('lmsg').textContent=msg||''}
 function refresh(){if(!user||dragging||document.hidden||document.getElementById('veil').style.display==='flex')return;q=q.then(async function(){if(!isAdmin&&!(await stillMember())){kick('Your access to this app has been removed.');return}if(canPanels()){await load();render()}if(isAdmin)await loadMem()}).catch(function(){})}
 async function start(u){
@@ -451,7 +467,7 @@ function render(){
   document.getElementById('ttl').textContent=tab==='main'?(c?node(c).title:'Panels Tracker'):TABS.filter(function(t){return t[0]===tab})[0][1];
   document.getElementById('crumb').textContent=(tab==='main'&&c)?chain(c).map(function(n){return n.title}).join('  \u203a  '):'';
   document.getElementById('fab').style.display=(tab==='main'&&(isAdmin||(role==='mod'&&!!c&&!!node(c)&&node(c).parent!==null)))?'block':'none';
-  document.getElementById('pen').classList.toggle('on',editing);
+  document.getElementById('pdone').style.display=editing?'flex':'none';paintMenu();
   document.getElementById('tabs').innerHTML=TABS.map(function(t){return '<button data-t="'+t[0]+'" class="t-'+t[0]+(tab===t[0]?' on':'')+'">'+t[1]+'</button>'}).join('');
   var h='';
   if(tab==='main'){
@@ -500,7 +516,7 @@ function openIcon(id){
   var fi=document.getElementById('fi');
   document.getElementById('up').onclick=function(){fi.click()};
   fi.onchange=function(){var f=fi.files[0];if(!f)return;var r=new FileReader();r.onload=function(){var im=new Image();im.onload=function(){var c=document.createElement('canvas');c.width=c.height=256;var s=Math.min(256/im.width,256/im.height),w=im.width*s,h=im.height*s;c.getContext('2d').drawImage(im,(256-w)/2,(256-h)/2,w,h);n.img=c.toDataURL('image/png');save();closeSheet();render()};im.src=r.result};r.readAsDataURL(f)};
-  var rm=document.getElementById('rm');if(rm)rm.onclick=function(){delete n.img;save();closeSheet();render()};
+  var rm=document.getElementById('rm');if(rm)rm.onclick=function(){askDel('section icon',function(){delete n.img;save();closeSheet();render()})};
   document.getElementById('x').onclick=closeSheet;
 }
 function siteOf(o){var n=node(o.node);return n?String(n.title).toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0]:''}
@@ -1120,7 +1136,7 @@ function openIgSettings(){
   document.getElementById('menu').classList.remove('on');
   var a=IG.acct,ph=phraseNow();
   var ig=!IG.sql?'<span class="stx">Coming soon</span>':a?(a.status==='ok'?'<span class="stx ok">@'+esc(a.username||'connected')+' connected</span>':a.status==='limited'?'<span class="stx ok">@'+esc(a.username||'connected')+' connected</span><span class="stx bad">Views, shares, saves and reposts are blocked. Reconnect to fix it.</span>':'<span class="stx bad">Needs reconnecting</span>'):'<span class="stx">Not connected</span>';
-  openSheet('<h3>Instagram &amp; auto-log</h3><div class="srow"><div><b>Instagram</b>'+ig+'</div>'+(IG.sql?(a&&a.status==='ok'?'<button class="sbtn" id="igd">Disconnect</button>':'<button class="sbtn go" id="igc">'+(a?'Reconnect':'Connect')+'</button>'):'')+(IG.sql&&a&&a.status==='limited'?'<button class="sbtn" id="igd" style="margin-left:6px">Disconnect</button>':'')+'</div><div class="srow"><div><b>Auto-log phrase / word</b><span class="stx">'+(ph?'“'+esc(ph)+'”':'Not set')+'</span></div><button class="sbtn" id="iph">'+(ph?'Change':'Set')+'</button></div>'+(IG.sql&&(!IG.acct||IG.acct.status!=='ok')?'<div class="pinfo">On Meta\u2019s sign-in screen, choose <b>Log in with Instagram</b>, then tap Continue. Your Instagram must be a Creator or Business account.</div>':'')+'<button class="btn alt" id="x">Close</button>');
+  openSheet('<h3>Connections</h3><div class="srow"><div><b>Instagram</b>'+ig+'</div>'+(IG.sql?(a&&a.status==='ok'?'<button class="sbtn" id="igd">Disconnect</button>':'<button class="sbtn go" id="igc">'+(a?'Reconnect':'Connect')+'</button>'):'')+(IG.sql&&a&&a.status==='limited'?'<button class="sbtn" id="igd" style="margin-left:6px">Disconnect</button>':'')+'</div><div class="srow"><div><b>Auto-log phrase / word</b><span class="stx">'+(ph?'“'+esc(ph)+'”':'Not set')+'</span></div><button class="sbtn" id="iph">'+(ph?'Change':'Set')+'</button></div>'+(IG.sql&&(!IG.acct||IG.acct.status!=='ok')?'<div class="pinfo">On Meta\u2019s sign-in screen, choose <b>Log in with Instagram</b>, then tap Continue. Your Instagram must be a Creator or Business account.</div>':'')+'<button class="btn alt" id="x">Close</button>');
   document.getElementById('x').onclick=closeSheet;
   var c=document.getElementById('igc');if(c)c.onclick=igConnect;
   var d=document.getElementById('igd');if(d)d.onclick=igDisconnect;
@@ -1338,7 +1354,7 @@ function setScreen(n,dir){
   var from=scrEl(scr),to=scrEl(n);scrY[scr]=window.scrollY;
   from.style.display='none';from.style.transform='';from.style.opacity='';
   var was=scr;scr=n;to.style.display='block';document.body.classList.toggle('ot-on',n!=='panels');if(n==='stats')paintStats(true);
-  document.getElementById('menu').classList.remove('on');paintDots(was);window.scrollTo(0,scrY[n]||0);
+  document.getElementById('menu').classList.remove('on');paintDots(was);paintMenu();window.scrollTo(0,scrY[n]||0);
   if(dir==null)dir=l.indexOf(n)>l.indexOf(was)?1:-1;
   try{to.animate([{transform:'translateX('+(dir*36)+'%)',opacity:.3},{transform:'none',opacity:1}],{duration:260,easing:'cubic-bezier(.2,.8,.2,1)'})}catch(e){}
 }
