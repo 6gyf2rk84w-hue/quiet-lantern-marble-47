@@ -846,7 +846,7 @@ function igDisconnect(){
 }
 async function igSync(quiet){
   if(!igOk()||!phraseNow())return 0;
-  var r=await igCall({action:'sync'});var n=(r&&r.logged)||0;
+  var r=await igCall({action:'sync',force:!quiet});var n=(r&&r.logged)||0;
   if(n){if(otApi)otApi.reload();toast(n===1?'1 new video was auto-logged.':n+' new videos were auto-logged.',true)}
   return n;
 }
@@ -908,11 +908,18 @@ document.getElementById('setup').addEventListener('click',function(e){var b=e.ta
   if(k==='deal')editDeal();else if(k==='phrase')editPhrase();else if(k==='ig'){if(!IG.sql)toast('Connect Instagram is coming soon.');else if(igOk())openIgSettings();else igConnect()}});
 function igReturn(){
   var m=location.search.match(/[?&]ig=([a-z]+)/);if(!m)return false;
+  var dm=location.search.match(/[?&]d=([^&]*)/),det='';try{det=dm?decodeURIComponent(dm[1]):''}catch(e){det=''}
   history.replaceState(null,'',location.pathname);
   var k=m[1];
   if(k==='connected'){toast('Instagram connected.',true);igSync(true)}
   else if(k==='limited'){toast('Instagram connected, but views, shares, saves and reposts are blocked. Reconnect once the insights permission is on.');setTimeout(function(){igSync(true)},5000)}
-  else if(k==='noig')toast('No Instagram account came through. It must be a Creator or Business account, and you need to choose it when signing in.');
+  else if(k==='noig'){
+    if(!det){toast('No Instagram account came through. It must be a Creator or Business account, and you need to choose it when signing in.');return true}
+    var txt='Connect Instagram details:\n'+det;
+    openSheet('<h3>No Instagram account came through</h3><p class="pinfo">It must be a Creator or Business account, chosen on Meta\u2019s screen. If it already is, copy these details and send them to Claude.</p><div class="invbox" style="font-size:12.5px;max-height:30vh;overflow:auto">'+esc(det)+'</div><button class="btn" id="ok">Copy details</button><button class="btn alt" id="x">Close</button>');
+    document.getElementById('ok').onclick=function(){copyText(txt)};
+    document.getElementById('x').onclick=closeSheet;
+  }
   else if(k==='cancelled')toast('Instagram connect was cancelled.');
   else toast('Couldn’t connect Instagram. Try again.');
   return true;
