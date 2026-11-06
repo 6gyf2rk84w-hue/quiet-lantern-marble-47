@@ -234,6 +234,13 @@ body.swiping .scr *{pointer-events:none!important}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation}
 input,textarea,select{font-size:max(16px,1em)!important}
 /* order sheets */
+.oel{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow-y:auto;margin-bottom:10px}
+.oer{padding:11px 12px;border-radius:14px;background:var(--card);border:1px solid var(--line)}
+.oeh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+.oeh b{font-size:16px}.oeh small{color:var(--mute);font-size:13px}
+.oer select{width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card2);color:var(--ink);-webkit-appearance:none;appearance:none;margin-bottom:8px}
+.oer input{margin-bottom:8px}
+.oec{font-size:13.5px;color:var(--mute)}.oec b{color:var(--ok)}
 .osl{display:flex;flex-direction:column;gap:6px;max-height:40vh;overflow-y:auto;margin-bottom:10px}
 .osr{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:13px;background:var(--card);border:1px solid var(--line)}
 .osr span{min-width:0}.osr b{display:block;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -728,7 +735,7 @@ function mountOrders(){
     confirm:function(what,go){askDel(what,go)},
     onPick:function(o,s,done){pickService(o,s,done)},
     deal:dealFor,onDeal:editDeal,noDealPrompt:setupShown,
-    onOrder:function(o){orderSheet([o],true)},onOrderAll:function(l){orderSheet(l,false)},
+    onOrder:function(o){orderSheet([o],true)},onOrderAll:function(l){orderEverything(l)},
     preview:canVideos()&&IG.sql?{fetch:function(link,o){return igPreview(o)}}:null,
     beforeRefresh:function(){return igSync(false)},
     noPreviewText:'Connect Instagram to pull live numbers.',
@@ -959,11 +966,56 @@ function orderSheet(list,single){
   if(single){
     planned(v).forEach(function(r){total+=r.cost;rows+='<div class="osr"><span><b>'+esc(STAT_NAME[r.s])+'</b><small>'+esc(r.svc)+(r.name&&r.name!==r.svc?' · '+esc(r.name):'')+' · '+r.qty.toLocaleString('en-US')+'</small></span><em>'+usd2(r.cost)+'</em></div>'});
   }else{
-    list.forEach(function(x){var pl=planned(x),t=pl.reduce(function(a,r){return a+r.cost},0);total+=t;rows+='<div class="osr"><span><b>'+esc(x.title||'Untitled video')+'</b><small>'+(pl.length?pl.map(function(r){return STAT_NAME[r.s]}).join(', '):'No services picked')+'</small></span><em>'+(pl.length?usd2(t):'—')+'</em></div>'});
+    list.forEach(function(x){var pl=planned(x),t=pl.reduce(function(a,r){return a+r.cost},0);total+=t;rows+='<div class="osr"><span><b>'+esc(x.title||'Untitled video')+'</b><small>'+(pl.length?pl.map(function(r){return STAT_NAME[r.s]}).join(', '):'Nothing to order yet')+'</small></span><em>'+(pl.length?usd2(t):'')+'</em></div>'});
   }
-  openSheet('<h3>'+(single?'Place order':'Order all')+'</h3>'+(single?'<p class="pinfo">'+esc(v.title||'This video')+'</p>':'<p class="pinfo">Every video still running this month.</p>')+'<div class="osl">'+rows+'</div><div class="pk-cost"><span>Total</span><b>'+usd2(total)+'</b></div><button class="btn" id="pay" disabled style="opacity:.45">Pay &amp; place order'+(single?'':'s')+'</button><p class="pinfo" style="text-align:center;margin-top:-4px">Placing orders unlocks once your panels are connected.</p>'+(single?'<button class="btn alt" id="chg">Change services</button>':'')+'<button class="btn alt" id="x">Close</button>');
+  openSheet('<h3>'+(single?'Place order':'Order everything')+'</h3>'+(single?'<p class="pinfo">'+esc(v.title||'This video')+'</p>':'<p class="pinfo">Every video still running this month.</p>')+'<div class="osl">'+rows+'</div><div class="pk-cost"><span>Total</span><b>'+usd2(total)+'</b></div><button class="btn" id="pay" disabled style="opacity:.45">Pay &amp; place order'+(single?'':'s')+'</button><p class="pinfo" style="text-align:center;margin-top:-4px">Placing orders unlocks once your panels are connected.</p>'+(single?'<button class="btn alt" id="chg">Change services</button>':'')+'<button class="btn alt" id="x">Close</button>');
   if(single)document.getElementById('chg').onclick=function(){logWizard(v,function(s,res){return otApi.setStat(v,s,res)})};
   document.getElementById('x').onclick=closeSheet;
+}
+
+/* ---------- Order everything: one service per stat, added to every video still missing it ---------- */
+async function serviceItems(stat){
+  var nm=(STAT_NAME[stat]||stat).toLowerCase();
+  if(canPanels()){
+    var sec=S.nodes.find(function(n){return n.parent===null&&n.title.trim().toLowerCase()===nm});if(!sec)return [];
+    var ids=kids(sec.id).map(function(x){return x.id});
+    return S.orders.filter(function(o){return ids.indexOf(o.node)>=0&&o.status==='working'}).map(function(o){var st=node(o.node);return {id:o.id,name:o.title,price:ppk(o.price),site:st?st.title:''}});
+  }
+  var r=await sb.rpc('service_catalog');if(r.error)return [];
+  return (r.data||[]).filter(function(x){return x.stat===nm}).map(function(x){return {id:String(x.id),name:x.name,price:ppk(x.price),site:''}});
+}
+async function orderEverything(list){
+  if(!canVideos()||!list.length)return;
+  openSheet('<h3>Order everything</h3><div class="pk-none">Loading services...</div>');
+  var rows=[];
+  for(var i=0;i<STAT_ORDER.length;i++){var s=STAT_ORDER[i],need=list.filter(function(v){return !((v.plan||{})[s])});if(!need.length)continue;rows.push({s:s,need:need,items:await serviceItems(s),pick:'',amt:''})}
+  if(!rows.length){orderSheet(list,false);return}
+  function qtyFor(v,r){var g=+((v.goals||{})[r.s]||0);return g||qnum(r.amt)}
+  function rowCost(r){var it=r.items.find(function(x){return x.id===r.pick});if(!it)return {n:0,c:0};var n=0,c=0;r.need.forEach(function(v){var q=qtyFor(v,r);if(q>0){n++;c+=it.price*q/1000}});return {n:n,c:c}}
+  function paint(){
+    var tot=0,vids={};
+    document.getElementById('oel').innerHTML=rows.map(function(r,i){var rc=rowCost(r);tot+=rc.c;if(rc.n)r.need.forEach(function(v){if(qtyFor(v,r)>0)vids[v.id]=1});
+      var noGoal=r.need.filter(function(v){return !((v.goals||{})[r.s])}).length;
+      return '<div class="oer"><div class="oeh"><b>'+esc(STAT_NAME[r.s])+'</b><small>'+r.need.length+' video'+(r.need.length===1?'':'s')+' missing it</small></div>'+
+        (r.items.length?'<select data-oe="'+i+'"><option value="">Skip '+esc(STAT_NAME[r.s].toLowerCase())+'</option>'+r.items.map(function(it){return '<option value="'+esc(it.id)+'"'+(it.id===r.pick?' selected':'')+'>'+esc(it.name)+(it.site?' · '+esc(it.site):'')+' — '+usd2(it.price)+' / 1K</option>'}).join('')+'</select>'+
+        (r.pick&&noGoal?'<input type="text" inputmode="numeric" data-oa="'+i+'" value="'+esc(r.amt)+'" placeholder="How many for the '+noGoal+' without a goal">':'')+
+        (r.pick?'<div class="oec">'+(rc.n?'Adds to '+rc.n+' video'+(rc.n===1?'':'s')+' · <b>'+usd2(rc.c)+'</b>':'Type how many to add it')+'</div>':''):'<div class="pk-none" style="padding:4px 0">No '+esc(STAT_NAME[r.s].toLowerCase())+' services yet.</div>')+'</div>'}).join('');
+    var n=Object.keys(vids).length;
+    document.getElementById('oet').innerHTML='<span>New services total</span><b>'+usd2(tot)+'</b>';
+    var ok=document.getElementById('ok');ok.disabled=!n;ok.style.opacity=n?'':'.45';ok.textContent=n?'Add to '+n+' video'+(n===1?'':'s'):'Pick a service first';
+  }
+  openSheet('<h3>Order everything</h3><div class="pinfo">Pick one service for each. It’s added to every video this month that doesn’t have one yet, using each video’s own goal. Services a video already has stay as they are.</div><div class="oel" id="oel"></div><div class="pk-cost" id="oet"></div><button class="btn" id="ok">Pick a service first</button><button class="btn alt" id="x">Cancel</button>');
+  var box=document.getElementById('oel');
+  box.addEventListener('change',function(e){var t=e.target;if(t.dataset.oe!=null){rows[+t.dataset.oe].pick=t.value;paint()}});
+  box.addEventListener('input',function(e){var t=e.target;if(t.dataset.oa!=null){rows[+t.dataset.oa].amt=t.value;var pos=t.selectionStart;paint();var f=box.querySelector('[data-oa="'+t.dataset.oa+'"]');if(f){f.focus();try{f.setSelectionRange(pos,pos)}catch(_){}}}});
+  document.getElementById('x').onclick=closeSheet;
+  document.getElementById('ok').onclick=async function(){
+    var b=this;b.disabled=true;b.textContent='Adding...';
+    for(var i=0;i<rows.length;i++){var r=rows[i],it=r.items.find(function(x){return x.id===r.pick});if(!it)continue;
+      for(var j=0;j<r.need.length;j++){var v=r.need[j],q=qtyFor(v,r);if(q>0)await otApi.setStat(v,r.s,{qty:q,plan:{ref:it.id,name:it.name,price:it.price}})}}
+    orderSheet(list,false);
+  };
+  paint();
 }
 
 /* ---------- Members (owner only) ---------- */

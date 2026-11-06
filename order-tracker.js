@@ -25,7 +25,7 @@
  *   deal(month): {per, cut, count} | null — the signed-in person's monthly deal; onDeal() opens the editor
  *   preview.fetch(link, order) — live numbers for one video; beforeRefresh() runs first when Refresh is tapped
  *   noDealPrompt() — true hides the Set monthly deal button (host shows its own setup steps)
- *   onOrder(order), onOrderAll(orders) — Place order on a card / Order all by the grand total
+ *   onOrder(order), onOrderAll(orders) — Place order on a card / Order everything by the grand total
  *   onLogged(o, setStat) — runs after a video is logged; setStat(stat, {qty, plan} | null)
  *   confirm(what, go) — host asks "are you sure?" before a delete, then calls go()
  *   linkPlaceholder: string — grey example text in the link box
@@ -139,12 +139,13 @@
     function statCard(o, s, label, ic, now) {
       const S = state(o, s, now); if (S === "none" || S === "g") return "";
       const p = planOf(o, s);
-      return `<div class="ot-stc s-${S}"${RO ? "" : ` data-ot-pick="${esc(o.id)}|${s}"`} title="${esc(label)}${p ? ` · ${esc(planText(p))} · ${usd(statValue(o, s))}` : ""}"><div class="n"><span class="ic">${icon(s, 16) || ic}</span><b>${fmt(real(o, s))}<span class="gl">/${fmt(goal(o, s))}</span></b><button class="ot-bot s-${S}" type="button" data-ot-bot="${esc(o.id)}|${s}" aria-label="${label} options">🤖</button></div><div class="ot-bar-r"><div class="ot-bar s-${S}"><i style="width:${S === "idle" ? 0 : pct(o, s)}%"></i></div><span class="ot-pct s-${S}">${pct(o, s)}%</span></div></div>`;
+      return `<div class="ot-stc s-${S}"${RO ? "" : ` data-ot-pick="${esc(o.id)}|${s}"`}><span class="ic">${icon(s) || ic}</span><div class="bd">
+        <div class="n"><b>${fmt(real(o, s))} / ${fmt(goal(o, s))}</b><small>${label}</small>${p ? `<em class="ot-plan">${esc(planText(p))} · ${usd(statValue(o, s))}</em>` : ""}</div>${barRow(o, s, label, S)}</div></div>`;
     }
     function card(o, n, now) {
       const ed = st.edit === o.id, vg = goal(o, "views"), vS = state(o, "views", now);
       const head = `<div class="ot-hd"><div class="ot-name"><small class="ot-num">${esc(L.order[0].toUpperCase() + L.order.slice(1))} ${n}${!st.who && opt.byLabel && opt.byLabel(o) ? ` <span class="ot-by">${esc(opt.byLabel(o))}</span>` : ""}${o.auto ? ` <span class="ot-by ot-auto">⚡ auto-logged</span>` : ""}</small>${o.title ? `<span class="ot-ttl">${esc(o.title)}</span>` : ""}</div>
-        ${!ed && value(o) ? `<span class="ot-usd">${usd(value(o))}</span>` : ""}${RO ? "" : `<button class="ot-edbtn" type="button" data-ot-edit="${esc(o.id)}">${ed ? "Done" : "✏️ Edit"}</button>`}</div>`;
+        ${RO ? "" : `<button class="ot-edbtn" type="button" data-ot-edit="${esc(o.id)}">${ed ? "Done" : "✏️ Edit"}</button>`}</div>`;
       if (ed) return `<div class="ot-card">${head}
         <div class="ot-egrid" style="grid-template-columns:1fr"><label>Title<input class="ot-in" data-ot-f="title" value="${esc(o.title)}"></label>
         <label>Post link<input class="ot-in" data-ot-f="link" inputmode="url" value="${esc(o.link)}"></label></div>
@@ -153,14 +154,15 @@
       const done = STATS.filter(([s]) => goal(o, s) && s !== "views" && state(o, s, now) === "g");
       const usdV = value(o);
       return `<div class="ot-card">${head}
-        <div class="ot-vrow"><div class="ot-views"${RO ? "" : ` data-ot-pick="${esc(o.id)}|views"`}${planOf(o, "views") ? ` title="${esc(planText(planOf(o, "views")))} · ${usd(statValue(o, "views"))}"` : ""}>${num(real(o, "views"))}<span class="g">/${vg ? fmt(vg) : "---"}</span><small>views</small>${vS === "g" ? `<span class="ot-chk">✓</span>` : ""}</div>${vg && vS !== "g" ? barRow(o, "views", "Views", vS) : ""}</div>
+        <div class="ot-views"${RO ? "" : ` data-ot-pick="${esc(o.id)}|views"`}>${num(real(o, "views"))}<span class="g"> / ${vg ? fmt(vg) : "---"}</span><small>views</small>${vS === "g" ? `<span class="ot-chk">✓</span>` : ""}${planOf(o, "views") ? `<em class="ot-plan">${esc(planText(planOf(o, "views")))} · ${usd(statValue(o, "views"))}</em>` : ""}</div>
+        ${vg && vS !== "g" ? barRow(o, "views", "Views", vS) : ""}
         <div class="ot-mid">${o.link ? `<button class="ot-side ot-copy" type="button" data-ot-copy="${esc(o.link)}">🔗<span>Copy link</span></button>` : `<span class="ot-side"></span>`}
           ${o.link ? `<a class="ot-thumb" href="${esc(o.link)}" target="_blank" rel="noopener" style="${o.thumb ? `background-image:url('${esc(o.thumb)}')` : ""}" aria-label="Open the post"></a>` : `<span class="ot-thumb"></span>`}
           ${!RO && opt.onOrder ? `<button class="ot-side ot-order" type="button" data-ot-order="${esc(o.id)}">🛒<span>Place order</span></button>` : `<span class="ot-side"></span>`}</div>
         <div class="ot-stats">${STATS.slice(1).map(([s, lb, ic]) => statCard(o, s, lb, ic, now)).join("")}</div>
-        ${!RO && opt.onPick && STATS.some(([s]) => !goal(o, s)) ? `<div class="ot-adds">${STATS.filter(([s]) => !goal(o, s)).map(([s, lb, ic]) => `<button class="ot-add" type="button" data-ot-pick="${esc(o.id)}|${s}">+ ${icon(s, 15) || ic} ${lb}</button>`).join("")}</div>` : ""}
-        ${done.length ? `<div class="ot-done">Done ${done.map(([s, lb, ic]) => { const [c, sy] = mark(o, s); return `<span class="ot-chip mk-${c}" title="${lb}">${sy} ${icon(s, 15) || ic}</span>`; }).join("")}</div>` : ""}
-        </div>`;
+        ${!RO && opt.onPick && STATS.some(([s]) => !goal(o, s)) ? `<div class="ot-adds">${STATS.filter(([s]) => !goal(o, s)).map(([s, lb, ic]) => `<button class="ot-add" type="button" data-ot-pick="${esc(o.id)}|${s}">+ ${icon(s, 18) || ic} ${lb}</button>`).join("")}</div>` : ""}
+        ${done.length ? `<div class="ot-done">Done ${done.map(([s, lb, ic]) => { const [c, sy] = mark(o, s); return `<span class="ot-chip mk-${c}" title="${lb}">${sy} ${icon(s, 18) || ic}</span>`; }).join("")}</div>` : ""}
+        ${usdV ? `<div class="ot-usd">${usd(usdV)}</div>` : ""}</div>`;
     }
     const cash = v => "$" + (Math.round(v * 100) / 100).toLocaleString("en-US", { maximumFractionDigits: 2 });
     const showDeal = () => !RO && opt.deal && (!st.who || st.who === opt.me);
@@ -195,7 +197,7 @@
         <button class="ot-ref ${st.busy ? "spin" : ""}" type="button" data-ot-ref="1"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>Refresh</button></div>
         ${people().length > 2 ? `<div class="ot-who">${people().map(x => `<button type="button" data-ot-who="${x.id == null ? "" : esc(x.id)}" aria-pressed="${(x.id || null) === st.who}">${esc(x.label)}</button>`).join("")}</div>` : ""}
         ${showDeal() ? dealCard(cur) : ""}
-        <div class="ot-grand"><div><span class="lb">Grand total · ${monthName(st.month)}</span><b>${usd(total)}</b></div>${!RO && opt.onOrderAll && live.length ? `<button class="ot-orderall" type="button" data-ot-orderall="1">🛒 Order all</button>` : ""}</div>
+        <div class="ot-grand"><div><span class="lb">Grand total · ${monthName(st.month)}</span><b>${usd(total)}</b></div>${!RO && opt.onOrderAll && live.length ? `<button class="ot-orderall" type="button" data-ot-orderall="1">Order everything</button>` : ""}</div>
         <div class="ot-key"><span>🟢 In progress</span><span>🟡 Stalling</span><span>🔴 Needs review</span></div>`;
       const canAdd = st.month === cur && !RO;
       h += live.length ? live.map(o => card(o, mine.indexOf(o) + 1, now)).join("") : (canAdd ? "" : `<div class="ot-empty">No ${esc(L.orders)} yet for ${monthName(st.month)}.</div>`);
