@@ -199,13 +199,13 @@
         <div class="ot-key"><span>🟢 In progress</span><span>🟡 Stalling</span><span>🔴 Needs review</span></div>`;
       const canAdd = st.month === cur && !RO;
       h += live.length ? live.map(o => card(o, mine.indexOf(o) + 1, now)).join("") : (canAdd ? "" : `<div class="ot-empty">No ${esc(L.orders)} yet for ${monthName(st.month)}.</div>`);
-      if (canAdd) h += `<button class="ot-big${live.length || fin.length ? " small" : ""}" type="button" data-ot-add="1"><i aria-hidden="true">+</i>Add an order${dl ? `<small>${left ? `📌 ${left} left this month` : "🔥 Deal complete"}</small>` : ""}</button>`;
+      if (canAdd) h += `<div class="ot-manual"><span>Already posted? Log it here.</span><button class="ot-mbtn" type="button" data-ot-add="1">Manual log</button></div>`;
       if (fin.length) h += `<div class="ot-sec"><div class="ot-sec-h">Completed</div>${fin.map(o => `<button class="ot-arow" type="button" data-ot-open="${esc(o.id)}">${esc(o.title || L.order + " " + (mine.indexOf(o) + 1))}<span>${fmt(real(o, "views"))} views ${st.open === o.id ? "▾" : "›"}</span></button>${st.open === o.id ? card(o, mine.indexOf(o) + 1, now) : ""}`).join("")}</div>`;
       if (arch.length) h += `<div class="ot-sec"><div class="ot-sec-h">Archive</div>${arch.map(m => { const a = vis().filter(o => o.month === m);
         return `<button class="ot-arow" type="button" data-ot-arch="${m}">${monthName(m)}<span>${fmt(a.reduce((t, o) => t + real(o, "views"), 0))} views · ${a.length} ${a.length === 1 ? esc(L.order) : esc(L.orders)}</span></button>${st.arch === m ? a.map((o, i) => card(o, i + 1, now)).join("") : ""}`; }).join("")}</div>`;
-      if (st.adding && canAdd) h += `<div class="ot-pop" data-ot-x="1"><div><form class="ot-addf" data-ot-log="1" autocomplete="off"><b class="ot-addh">Add an order</b>
+      if (st.adding && canAdd) h += `<div class="ot-pop" data-ot-x="1"><div><form class="ot-addf" data-ot-log="1" autocomplete="off"><b class="ot-addh">Manual log</b><span class="ot-addn">For a video you already posted. New posts with your auto-log phrase log themselves.</span>
         <label class="ot-lbl">Title<input class="ot-in" name="title" placeholder="Title your video"></label><label class="ot-lbl">Link<input class="ot-in" name="link" inputmode="url" autocapitalize="off" placeholder="${esc(opt.linkPlaceholder || "Instagram post link")}"></label>
-        <div class="ot-row"><button class="ot-btn" type="submit">Add order</button><button class="ot-btn ghost" type="button" data-ot-x="1">Cancel</button></div></form></div></div>`;
+        <div class="ot-row"><button class="ot-btn" type="submit">Log it</button><button class="ot-btn ghost" type="button" data-ot-x="1">Cancel</button></div></form></div></div>`;
       if (st.ask) { const [id, s] = st.ask, o = st.orders.find(x => x.id === id), lb = (STATS.find(x => x[0] === s) || [])[1];
         h += `<div class="ot-pop" data-ot-x="1"><div><b>${esc(lb)}</b><p>${fmt(real(o, s))} of ${fmt(goal(o, s))} (${pct(o, s)}%). Mark this goal complete?</p>
           <div class="ot-row"><button class="ot-btn" type="button" data-ot-mark="1">Mark complete</button><button class="ot-btn ghost" type="button" data-ot-x="1">Cancel</button></div></div></div>`; }

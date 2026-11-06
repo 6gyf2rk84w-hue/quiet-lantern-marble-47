@@ -149,3 +149,8 @@
 .ot-big.small small{flex-basis:100%;margin-top:0}
 .ot-addf{display:flex;flex-direction:column;gap:12px}
 .ot-addh{font-family:var(--ot-display);font-size:22px}
+.ot .ot-in{font-size:16px}
+.ot-manual{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 4px 0}
+.ot-manual span{font-weight:600;font-size:14.5px;color:rgba(255,255,255,.6)}
+.ot-mbtn{flex:none;border:1.5px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:rgba(255,255,255,.85);border-radius:999px;padding:9px 16px;font-weight:700;font-size:15px}
+.ot-addn{font-weight:600;font-size:14px;color:rgba(255,255,255,.6);margin-top:-6px}
