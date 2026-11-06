@@ -13,7 +13,9 @@
  *             — default: none (cards show an empty thumbnail spot until you plug one in; see README)
  *   monthlyTarget: number   — "4/10 orders" counter (default 10)
  *   prices:   { views, likes, shares, saves, reposts, comments } — $ per single one, for the Grand total (default: none → no $)
- *   rates:    { likes, shares, saves, reposts, comments } — per view, used to fill the other goals when you set a views goal
+ *   rates:    { likes, shares, saves, reposts, comments } per view, or rates(month) returning that — a views goal fills the
+ *             other five from them; numbers someone typed themselves are never overwritten
+ *   suggest(o, ownVideosThatMonth): {goal, past} | null — the 🎯 suggested views goal on a card (tap to use it)
  *   refreshEveryMin: number — auto refresh while the screen is open (default 10)
  *   labels:   { order: "order", orders: "orders" }
  *   readOnly: boolean — hide every editing control (for viewers)
@@ -73,7 +75,7 @@
     const preview = opt.preview || null;
     const target = opt.monthlyTarget || 10;
     const prices = opt.prices || null;
-    const rates = Object.assign({}, DEF_RATES, opt.rates || {});
+    const ratesFor = m => Object.assign({}, DEF_RATES, (typeof opt.rates === "function" ? (() => { try { return opt.rates(m); } catch (e) { return null; } })() : opt.rates) || {});
     const L = Object.assign({ order: "order", orders: "orders" }, opt.labels || {});
     const st = { orders: [], month: monthKey(Date.now()), edit: null, open: null, ask: null, busy: false, arch: null, who: null, shown: {}, adding: false };
     const vis = () => st.who ? st.orders.filter(o => o._by === st.who) : st.orders;
@@ -100,6 +102,21 @@
     const mark = (o, s) => { const p = goal(o, s) ? real(o, s) / goal(o, s) : 0; return p >= .8 ? ["g", "✓"] : p >= .5 ? ["y", "✓"] : ["r", "✕"]; };
     const finished = (o, now) => STATS.some(([s]) => goal(o, s)) && STATS.every(([s]) => !goal(o, s) || state(o, s, now) === "g");
     const planOf = (o, s) => (o.plan || {})[s] || null;
+    // views goal → the other five. A goal still holding the number we filled in (or empty) follows the views goal;
+    // a number someone typed or picked themselves stays as it is.
+    function fillFrom(o) {
+      const v = goal(o, "views"); if (!v) return;
+      const r = ratesFor(o.month), f = o.filled = o.filled || {};
+      STATS.slice(1).forEach(([s]) => { const cur = goal(o, s);
+        if (cur && f[s] !== cur) { delete f[s]; return; }
+        const n = Math.max(1, Math.round(v * r[s])); o.goals[s] = n; f[s] = n; });
+      if (!Object.keys(f).length) delete o.filled;
+    }
+    const sugOf = o => { if (!opt.suggest || RO || goal(o, "views") || (opt.me && o._by && o._by !== opt.me)) return null;
+      try { return opt.suggest(o, ownIn(o.month).slice().sort((a, b) => a.postedAt - b.postedAt)); } catch (e) { return null; } };
+    function sugTag(o) { const g = sugOf(o); if (!g || !g.goal) return "";
+      if (g.past) return `<button class="ot-sg hit" type="button" data-ot-sug="${esc(o.id)}|${g.goal}">✓ Past its share<b>${fmt(g.goal)}</b><small>Tap to use</small></button>`;
+      return `<button class="ot-sg" type="button" data-ot-sug="${esc(o.id)}|${g.goal}">🎯 Suggested<b>${fmt(g.goal)}</b><small>Tap to use</small></button>`; }
     const statValue = (o, s) => { const p = planOf(o, s); if (p && goal(o, s)) return (+p.price || 0) * goal(o, s) / 1000; return prices ? (+prices[s] || 0) * (goal(o, s) || real(o, s)) : 0; };
     const value = o => STATS.reduce((t, [s]) => t + statValue(o, s), 0);
     const RO = !!opt.readOnly;
@@ -156,6 +173,7 @@
       return `<div class="ot-card">${head}
         <div class="ot-views"${RO ? "" : ` data-ot-pick="${esc(o.id)}|views"`}>${num(real(o, "views"))}<span class="g"> / ${vg ? fmt(vg) : "---"}</span><small>views</small>${vS === "g" ? `<span class="ot-chk">✓</span>` : ""}${planOf(o, "views") ? `<em class="ot-plan">${esc(planText(planOf(o, "views")))} · ${usd(statValue(o, "views"))}</em>` : ""}</div>
         ${vg && vS !== "g" ? barRow(o, "views", "Views", vS) : ""}
+        ${sugTag(o)}
         <div class="ot-mid">${o.link ? `<button class="ot-side ot-copy" type="button" data-ot-copy="${esc(o.link)}">🔗<span>Copy link</span></button>` : `<span class="ot-side"></span>`}
           ${o.link ? `<a class="ot-thumb" href="${esc(o.link)}" target="_blank" rel="noopener" style="${o.thumb ? `background-image:url('${esc(o.thumb)}')` : ""}" aria-label="Open the post"></a>` : `<span class="ot-thumb"></span>`}
           ${!RO && opt.onOrder ? `<button class="ot-side ot-order" type="button" data-ot-order="${esc(o.id)}">🛒<span>Place order</span></button>` : `<span class="ot-side"></span>`}</div>
@@ -217,10 +235,12 @@
 
     // ---- taps -----------------------------------------------------------------
     root.addEventListener("click", async e => {
-      const b = e.target.closest("[data-ot-m],[data-ot-ref],[data-ot-edit],[data-ot-save],[data-ot-del],[data-ot-copy],[data-ot-bot],[data-ot-mark],[data-ot-x],[data-ot-open],[data-ot-arch],[data-ot-pick],[data-ot-focus],[data-ot-who],[data-ot-deal],[data-ot-add],[data-ot-order],[data-ot-orderall]");
+      const b = e.target.closest("[data-ot-sug],[data-ot-m],[data-ot-ref],[data-ot-edit],[data-ot-save],[data-ot-del],[data-ot-copy],[data-ot-bot],[data-ot-mark],[data-ot-x],[data-ot-open],[data-ot-arch],[data-ot-pick],[data-ot-focus],[data-ot-who],[data-ot-deal],[data-ot-add],[data-ot-order],[data-ot-orderall]");
       if (!b) return; const d = b.dataset;
       if (d.otX && e.target !== b) return;
       if (d.otPick && e.target.closest("[data-ot-bot]")) return;
+      if (d.otSug) { const [id, v] = d.otSug.split("|"), o = st.orders.find(x => x.id === id); if (!o || RO) return;
+        o.goals = o.goals || {}; o.goals.views = +v; fillFrom(o); await save(); draw(); toast("Views goal set · the rest filled in"); return; }
       if (d.otOrder) { const o = st.orders.find(x => x.id === d.otOrder); if (o && opt.onOrder && !RO) opt.onOrder(o); return; }
       if (d.otOrderall) { if (opt.onOrderAll && !RO) { const m = st.month, list = vis().filter(o => o.month === m && !finished(o, Date.now())); opt.onOrderAll(list); } return; }
       if (d.otAdd) { st.adding = true; draw(); const f = root.querySelector(".ot-addf [name=title]"); if (f) f.focus(); return; }
@@ -231,10 +251,10 @@
       else if (d.otEdit) { st.edit = st.edit === d.otEdit ? null : d.otEdit; draw(); }
       else if (d.otSave) { const o = st.orders.find(x => x.id === d.otSave), c = b.closest(".ot-card"); o.goals = o.goals || {};
         c.querySelectorAll("[data-ot-f]").forEach(i => { o[i.dataset.otF] = i.dataset.otF === "link" ? cleanLink(i.value) : i.value.trim(); });
-        const oldV = goal(o, "views");
-        c.querySelectorAll("[data-ot-g]").forEach(i => { const v = i.value.trim() === "" ? 0 : parseNum(i.value); if (v != null) o.goals[i.dataset.otG] = v; });
-        // a new views goal fills any empty goals from your rates (type them yourself and they stick)
-        if (goal(o, "views") && goal(o, "views") !== oldV) STATS.slice(1).forEach(([s]) => { if (!goal(o, s)) o.goals[s] = Math.max(1, Math.round(goal(o, "views") * rates[s])); });
+        const oldV = goal(o, "views"), was = Object.assign({}, o.goals);
+        c.querySelectorAll("[data-ot-g]").forEach(i => { const s = i.dataset.otG, v = i.value.trim() === "" ? 0 : parseNum(i.value); if (v == null) return;
+          o.goals[s] = v; if (o.filled && v !== (+was[s] || 0)) delete o.filled[s]; });   // typed by hand → theirs to keep
+        if (goal(o, "views") && goal(o, "views") !== oldV) fillFrom(o);
         st.edit = null; await save(); draw(); toast("Saved"); }
       else if (d.otDel) { const go = async () => { st.orders = st.orders.filter(x => x.id !== d.otDel); st.edit = null; await save(); draw(); toast("Deleted"); };
         if (opt.confirm) opt.confirm(L.order, go); else if (confirm("Delete this " + L.order + "?")) go(); }
@@ -250,8 +270,9 @@
       else if (d.otPick && opt.onPick && !RO) { const [id, s] = d.otPick.split("|"), o = st.orders.find(x => x.id === id); if (!o) return;
         opt.onPick(o, s, res => setStat(o, s, res)); }
     });
-    async function setStat(o, s, res) { o.goals = o.goals || {}; o.plan = o.plan || {};
-      if (!res) { delete o.goals[s]; delete o.plan[s]; } else { o.goals[s] = res.qty; if (res.plan) o.plan[s] = res.plan; else delete o.plan[s]; }
+    async function setStat(o, s, res) { o.goals = o.goals || {}; o.plan = o.plan || {}; const oldV = goal(o, "views");
+      if (!res) { delete o.goals[s]; delete o.plan[s]; if (o.filled) delete o.filled[s]; } else { o.goals[s] = res.qty; if (res.plan) o.plan[s] = res.plan; else delete o.plan[s]; }
+      if (s === "views" && goal(o, "views") && goal(o, "views") !== oldV) fillFrom(o);
       await save(); draw(); }
     root.addEventListener("submit", async e => {
       if (!e.target.matches("[data-ot-log]")) return; e.preventDefault();

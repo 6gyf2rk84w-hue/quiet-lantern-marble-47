@@ -264,14 +264,42 @@ input,textarea,select{font-size:max(16px,1em)!important}
 .pk-cost{display:flex;justify-content:space-between;align-items:baseline;margin:2px 0 8px;font-size:15px;color:var(--mute)}
 .pk-cost b{font-size:22px;color:var(--ok)}
 .pk-none{color:var(--mute);font-size:14.5px;padding:10px 2px 14px;line-height:1.45}
+/* Stats: CPM goals */
+#sscreen{min-height:100vh}
+#statsroot{max-width:640px;margin:0 auto;padding:14px 16px 40px}
+.gbox{position:relative;border-radius:26px;padding:18px 18px 20px;background:linear-gradient(160deg,#1E3344 0%,#172A38 55%,#123A31 130%);border:1px solid rgba(255,255,255,.1);box-shadow:0 10px 30px rgba(0,0,0,.3);overflow:hidden}
+.gtabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:5px;border-radius:999px;background:rgba(255,255,255,.08);margin-bottom:18px}
+.gtabs button{height:46px;border:0;border-radius:999px;background:none;color:rgba(255,255,255,.6);font:800 17px/1 "Geist",system-ui,sans-serif}
+.gtabs button.on{background:#fff;color:#0B1A26;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+.gtl{font:800 17px/1.25 "Geist",system-ui,sans-serif;color:#fff;margin:0 0 14px}
+.gmh{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
+.gcpm{white-space:nowrap;font:800 26px/1.1 "Bricolage Grotesque","Arial Black",system-ui,sans-serif;letter-spacing:-.02em;color:#fff}
+.gneed{font-weight:700;font-size:16px;color:rgba(255,255,255,.62);margin-top:3px}
+.gchg{flex:0 0 auto;height:44px;border-radius:999px;border:1.5px solid rgba(255,255,255,.22);background:rgba(255,255,255,.06);color:#fff;font:800 16px/1 "Geist",system-ui,sans-serif;padding:0 16px}
+.gtrk{position:relative;padding-top:52px}
+.gbub{position:absolute;top:0;left:0;white-space:nowrap;background:#1BE07F;color:#06210F;border-radius:999px;padding:9px 16px;font:800 15px/1 "Geist",system-ui,sans-serif;box-shadow:0 0 18px rgba(27,224,127,.35);visibility:hidden}
+.gbub b{font:800 21px/1 "Bricolage Grotesque","Arial Black",system-ui,sans-serif;letter-spacing:-.01em}
+.gbub i{position:absolute;bottom:-7px;left:20px;width:14px;height:14px;background:#1BE07F;transform:translateX(-50%) rotate(45deg);border-radius:2px}
+.gbar{position:relative;height:18px;border-radius:9px;background:#122029}
+.gfill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:9px;background:#1BE07F;box-shadow:0 0 14px rgba(27,224,127,.45);transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.gtick{position:absolute;top:-8px;bottom:-8px;width:4px;margin-left:-2px;border-radius:2px;background:#E8EEF3}
+.glabs{position:relative;height:50px;margin-top:14px}
+.glab{position:absolute;top:0;transform:translateX(-50%);text-align:center;line-height:1.15}
+.glab.end{transform:translateX(-100%);text-align:right}
+.glab b{display:block;font:800 19px/1.1 "Geist",system-ui,sans-serif;color:#fff}
+.glab small{display:block;font-weight:700;font-size:15px;color:rgba(255,255,255,.62)}
+.gempty{display:grid;gap:8px;text-align:center;padding:8px 4px}
+.gempty b{font-size:19px;color:#fff}
+.gempty span{color:rgba(255,255,255,.62);font-size:15px;margin-bottom:6px}
 </style>
 </head>
 <body class="ot-on">
-<div id="oscreen" class="scr"><div class="ohead"><button class="omore" data-more="1" aria-label="More">&#8943;</button><h1>Orders Tracker</h1><div class="dots"><button data-scr="orders" aria-label="Orders Tracker"></button><button data-scr="panels" aria-label="Panels Tracker"></button></div></div><div id="otnote"><div>Orders are saved on this phone only for now. One quick setup step in Supabase will sync them for everyone.</div></div><div id="setup" style="display:none"></div><div id="otroot"></div></div>
+<div id="oscreen" class="scr"><div class="ohead"><button class="omore" data-more="1" aria-label="More">&#8943;</button><h1>Orders Tracker</h1><div class="dots"></div></div><div id="otnote"><div>Orders are saved on this phone only for now. One quick setup step in Supabase will sync them for everyone.</div></div><div id="setup" style="display:none"></div><div id="otroot"></div></div>
+<div id="sscreen" class="scr" style="display:none"><div class="ohead"><button class="omore" data-more="1" aria-label="More">&#8943;</button><h1>Stats</h1><div class="dots"></div></div><div id="statsroot"></div></div>
 <div id="pscreen" class="scr" style="display:none">
 <div id="top">
   <div class="hrow"><button id="back" data-back="1" aria-label="Back">&#8592;</button><div class="tw"><h1 id="ttl">Panel Tracker</h1><div id="crumb"></div></div><button id="pen" data-pen="1" aria-label="Edit mode">&#9998;</button><button id="more" data-more="1" aria-label="More">&#8943;</button></div>
-  <div class="dots"><button data-scr="orders" aria-label="Orders Tracker"></button><button data-scr="panels" aria-label="Panels Tracker"></button></div>
+  <div class="dots"></div>
   <div id="tabs"></div>
 </div>
 <div id="main"><div class="empty">Loading...</div></div>
@@ -345,8 +373,8 @@ function byPos(a,b){return (a.pos==null?1e12:a.pos)-(b.pos==null?1e12:b.pos)}
 function sortAll(){S.nodes.sort(byPos);S.orders.sort(byPos)}
 async function memberRow(){if(!user)return null;var r=await sb.from('members').select('*').eq('user_id',user.id);if(r.error)return {unk:true};return (r.data&&r.data[0])||null}
 async function stillMember(){var m=await memberRow();if(!m)return false;if(m.unk)return true;var nr=m.role||'viewer';if(nr!==role)setRole(nr);return true}
-async function setRole(nr){role=nr;isViewer=!canPanels();if(isViewer){editing=false;if(scr!=='orders')setScreen('orders')}applyRole();render();await loadIg();mountOrders();paintSetup()}
-function applyRole(){var p=canPanels();document.getElementById('pen').style.display=p?'flex':'none';document.getElementById('credsBtn').style.display=p?'block':'none';document.getElementById('modsBtn').style.display=isAdmin?'block':'none';document.getElementById('igBtn').style.display=canVideos()?'block':'none';document.querySelectorAll('.dots').forEach(function(d){d.style.display=p?'flex':'none'})}
+async function setRole(nr){role=nr;isViewer=!canPanels();if(isViewer){editing=false;if(scr==='panels')setScreen('orders')}if(scr==='stats'&&!canVideos())setScreen('orders');applyRole();render();await loadIg();mountOrders();paintSetup();loadEngine()}
+function applyRole(){var p=canPanels();document.getElementById('pen').style.display=p?'flex':'none';document.getElementById('credsBtn').style.display=p?'block':'none';document.getElementById('modsBtn').style.display=isAdmin?'block':'none';document.getElementById('igBtn').style.display=canVideos()?'block':'none';paintDots()}
 function kick(msg){document.getElementById('cpage').classList.remove('on');document.getElementById('mpage').classList.remove('on');if(scr!=='orders')setScreen('orders');role='viewer';MEM=[];isViewer=true;applyRole();var u=user;user=null;isAdmin=false;S={nodes:[],orders:[]};path=[];editing=false;closeSheet();document.getElementById('main').innerHTML='';if(otApi){otApi.destroy();otApi=null}var se=document.getElementById('setup');se.innerHTML='';se.style.display='none';document.getElementById('otroot').style.display='';sb.auth.signOut().catch(function(){});document.getElementById('login').style.display='flex';document.getElementById('lmsg').textContent=msg||''}
 function refresh(){if(!user||dragging||document.hidden||document.getElementById('veil').style.display==='flex')return;q=q.then(async function(){if(!isAdmin&&!(await stillMember())){kick('Your access to this app has been removed.');return}if(canPanels()){await load();render()}if(isAdmin)await loadMem()}).catch(function(){})}
 async function start(u){
@@ -362,6 +390,7 @@ async function start(u){
   await loadIg();
   mountOrders();
   paintSetup();
+  loadEngine();
   if(!igReturn())igSync(true);
   if(canPanels())await load();
   if(u.user_metadata&&u.user_metadata.must_change)setTimeout(function(){newPassword(true)},200);
@@ -683,7 +712,7 @@ document.getElementById('lgo').onclick=async function(){
 document.getElementById('lfg').onclick=forgotPw;
 document.addEventListener('visibilitychange',refresh);
 setInterval(refresh,20000);
-setInterval(function(){if(otApi&&user&&scr==='orders'&&!document.hidden&&document.getElementById('veil').style.display!=='flex')otApi.reload()},20000);
+setInterval(function(){if(otApi&&user&&scr!=='panels'&&!document.hidden&&document.getElementById('veil').style.display!=='flex')Promise.resolve(otApi.reload()).then(function(){if(scr==='stats')paintStats()})},20000);
 /* ---------- Orders Tracker screen ---------- */
 var otApi=null,VKEY='orders-tracker-videos-v1',vLocal=false,vSnap={};
 function canPanels(){return role==='owner'||role==='mod'}
@@ -735,6 +764,7 @@ function mountOrders(){
     confirm:function(what,go){askDel(what,go)},
     onPick:function(o,s,done){pickService(o,s,done)},
     deal:dealFor,onDeal:editDeal,noDealPrompt:setupShown,
+    rates:gRates,suggest:suggestFor,
     onOrder:function(o){orderSheet([o],true)},onOrderAll:function(l){orderEverything(l)},
     preview:canVideos()&&IG.sql?{fetch:function(link,o){return igPreview(o)}}:null,
     beforeRefresh:function(){return igSync(false)},
@@ -830,9 +860,148 @@ function editDeal(){
     var b=document.getElementById('ok');b.disabled=true;b.textContent='Saving...';
     var r=await sb.auth.updateUser({data:{deals:ds}});
     if(r.error){b.disabled=false;b.textContent='Save deal';e.textContent=r.error.message;return}
-    if(r.data&&r.data.user)user=r.data.user;closeSheet();toast('Deal saved.',true);paintSetup();if(otApi)otApi.redraw();
+    if(r.data&&r.data.user)user=r.data.user;closeSheet();toast('Deal saved.',true);paintSetup();if(otApi)otApi.redraw();paintStats();
   };
 }
+
+/* ---------- Goal engine: ratios + CPM plan ----------
+   Ratios (likes per view and so on) come from everyone's real numbers, combined: your past videos plus every
+   video logged in the app. Supabase only ever hands back month totals, never anyone's videos.
+   A month's ratios = the two months before it; nothing there → the learned average → the starting ratios. */
+var GE={months:null,spreadFrom:'2026-09',learnFrom:'2026-10',start:{likes:.0583,shares:.0224,saves:.01,reposts:.007,comments:.000107}};
+var GSTATS=['likes','shares','saves','reposts','comments'];
+function gBack(m,n){var d=new Date(Date.UTC(+m.slice(0,4),+m.slice(5,7)-1-n,15));return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')}
+async function loadEngine(){
+  if(!user||!canVideos()||!sb)return;
+  try{var r=await sb.rpc('engine_data');GE.months=!r.error&&r.data&&r.data.months?r.data.months:null}catch(e){GE.months=null}
+  if(otApi)otApi.redraw();if(scr==='stats')paintStats();
+}
+setInterval(function(){if(user&&!document.hidden)loadEngine()},30*60e3);
+// month totals: from Supabase once its step is run; until then, just the videos this phone can see
+function gMonths(){
+  if(GE.months)return GE.months;
+  var out={},raw={};
+  ((otApi&&otApi.orders)||[]).forEach(function(o){var r=o.real||{},v=+r.views||0;if(!(v>0)||!o.month)return;
+    var t=out[o.month]=out[o.month]||{n:0,views:0};t.n++;t.views+=v;(raw[o.month]=raw[o.month]||[]).push(v);
+    GSTATS.forEach(function(s){if(r[s]!=null){t[s]=(t[s]||0)+(+r[s]||0);t[s+'_v']=(t[s+'_v']||0)+v}})});
+  Object.keys(out).forEach(function(m){var a=raw[m],avg=out[m].views/a.length;out[m].spread=a.length>=2?a.map(function(x){return x/avg}):[]});
+  return out;
+}
+function gLearned(cur){
+  var M=gMonths(),r=Object.assign({},GE.start),n=1;
+  Object.keys(M).filter(function(m){return m>=GE.learnFrom&&m<cur}).sort().forEach(function(m){var t=M[m],tot={},any=false;
+    GSTATS.forEach(function(s){if(t[s+'_v']>0){tot[s]=(t[s]||0)/t[s+'_v'];any=true}});
+    if(!any)return;Object.keys(tot).forEach(function(s){r[s]=(r[s]*n+tot[s])/(n+1)});n++});
+  return r;
+}
+function gRates(m){
+  var M=gMonths(),from=[gBack(m,1),gBack(m,2)],L=null,o={};
+  GSTATS.forEach(function(s){var num=0,den=0;from.forEach(function(k){var t=M[k];if(t){num+=+t[s]||0;den+=+t[s+'_v']||0}});
+    if(num>0&&den>0)o[s]=num/den;else{L=L||gLearned(monthNow());o[s]=L[s]}});
+  return o;
+}
+function gHash(s){var h=2166136261;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}
+  h^=h>>>16;h=Math.imul(h,2246822507);h^=h>>>13;h=Math.imul(h,3266489909);h^=h>>>16;return (h>>>0)/4294967296}
+// how views spread across a month's videos (each video ÷ its month's average), from past months
+function gPool(m){var M=gMonths(),out=[];Object.keys(M).filter(function(k){return k>=GE.spreadFrom&&k<m}).forEach(function(k){(M[k].spread||[]).forEach(function(x){if(x>0)out.push(+x)})});
+  return (out.length>=3?out:[.45,.55,.65,.75,.85,.95,1.05,1.2,1.5,2]).sort(function(a,b){return a-b})}
+function gShape(m,n){var P=gPool(m),k=P.length,q=function(t){var x=t*(k-1),i=Math.floor(x),f=x-i;return P[i]+(P[Math.min(k-1,i+1)]-P[i])*f};
+  var vals=[],ord=[],w=[];for(var i=0;i<n;i++){vals.push(q((i+.5)/n));ord.push(i)}
+  ord.sort(function(a,b){return gHash(m+'#'+a)-gHash(m+'#'+b)});ord.forEach(function(pos,i){w[pos]=vals[i]});return w}
+// CPM plan: total views needed = videos × pay per video ÷ CPM × 1,000, split into a views goal per video.
+// A video with its own views goal keeps it (or its real views, if already past it). A video already past its
+// share keeps its real views. Whatever's left is split by the spread, in whole thousands.
+function gPlan(m,list,cpm,deal,isCurrent){
+  var orders=+deal.count||0,per=+deal.per||0;if(!(cpm>0)||!(orders>0)||!(per>0))return null;
+  var n=isCurrent?Math.max(orders,list.length):list.length;if(!n)return null;
+  var pay=orders*per,T=pay/cpm*1000,w=gShape(m,n),items=[],left=T,i;
+  for(i=0;i<n;i++){var o=list[i]||null,real=o?(+((o.real||{}).views)||0):0,tv=o?(+((o.goals||{}).views)||0):0;
+    if(o&&tv>0){items.push({id:o.id,posted:true,set:true,goal:tv,real:real});left-=Math.max(tv,real)}
+    else items.push({id:o?o.id:null,posted:!!o,set:false,goal:0,real:real,w:w[i]})}
+  var free=items.filter(function(x){return !x.set});
+  while(free.length){var W=free.reduce(function(a,x){return a+x.w},0),past=free.filter(function(x){return x.real>0&&x.real>=Math.max(0,left)*x.w/W});if(!past.length)break;
+    past.forEach(function(x){x.goal=Math.ceil(x.real/1000)*1000;x.past=true;left-=x.goal});free=free.filter(function(x){return past.indexOf(x)<0})}
+  if(free.length){var L=Math.max(0,Math.ceil(left/1000)*1000),W2=free.reduce(function(a,x){return a+x.w},0),raw=free.map(function(x){return L*x.w/W2});
+    free.forEach(function(x,j){x.goal=Math.floor(raw[j]/1000)*1000});var gap=Math.round((L-free.reduce(function(a,x){return a+x.goal},0))/1000);
+    free.map(function(x,j){return {x:x,r:raw[j]-x.goal}}).sort(function(a,b){return b.r-a.r}).forEach(function(z){if(gap>0){z.x.goal+=1000;gap--}})}
+  return {T:T,pay:pay,n:n,items:items};
+}
+var gMemo={k:'',p:null};
+function suggestFor(o,list){
+  var c=cpmFor(o.month),d=dealFor(o.month);if(!c||!d)return null;
+  var k=[o.month,c,d.per,d.count,list.map(function(x){return x.id+':'+((x.goals||{}).views||0)+':'+((x.real||{}).views||0)}).join(',')].join('|');
+  if(gMemo.k!==k)gMemo={k:k,p:gPlan(o.month,list,c,d,o.month===monthNow())};
+  var it=gMemo.p&&gMemo.p.items.find(function(x){return x.id===o.id});
+  return it&&!it.set&&it.goal?{goal:it.goal,past:!!it.past}:null;
+}
+
+/* ---------- CPM goal (dollars per 1,000 real views), per month, carried into the months after ---------- */
+function cpmFor(m){var c=(user&&user.user_metadata&&user.user_metadata.cpm)||{};var ks=Object.keys(c).filter(function(k){return k<=m&&+c[k]>0}).sort();return ks.length?+c[ks[ks.length-1]]:null}
+function payFor(d){return d?(+d.per||0)*(+d.count||0):0}     // the deal on paper: before the agency cut
+function needFor(pay,c){return c>0?pay/c*1000:0}
+function gfmt(n){n=+n||0;var a=Math.abs(n);if(a>=1e6)return (n/1e6).toFixed(a>=1e7?1:2).replace(/\.?0+$/,'')+'M';if(a>=1e4)return Math.round(n/1e3)+'K';if(a>=1e3)return (n/1e3).toFixed(1).replace(/\.0$/,'')+'K';return String(Math.round(n))}
+function gcash(v){return '$'+(Math.round(v*100)/100).toLocaleString('en-US',{maximumFractionDigits:2})}
+function cpmTxt(v,dp){if(dp===2)return '$'+(+v).toFixed(2);return '$'+(v>=100?Math.round(v).toLocaleString('en-US'):v>=10?v.toFixed(1):v.toFixed(2))}
+function editCpm(){
+  if(!canVideos())return;
+  var d=dealFor(monthNow());if(!d){toast('Set your monthly deal first.');editDeal();return}
+  var c=cpmFor(monthNow()),pay=payFor(d);
+  openSheet('<h3>CPM goal</h3><div class="pinfo">Dollars per 1,000 real views you want this month. Your deal is '+gcash(pay)+' on paper ('+(+d.count)+' videos × '+gcash(+d.per)+').</div><label class="fl2" for="cpmi">CPM goal ($)</label><input type="text" id="cpmi" inputmode="decimal" placeholder="3.00" autocomplete="off"><div class="pk-cost" id="csum"></div><div class="perr" id="cerr"></div><button class="btn" id="ok">Save goal</button><button class="btn alt" id="x">Cancel</button>');
+  var I=document.getElementById('cpmi');I.value=c?(+c).toFixed(2):'';
+  function val(){return parseFloat(String(I.value).replace(/[^0-9.]/g,''))}
+  function sum(){var v=val();document.getElementById('csum').innerHTML=v>0?'<span>Needs this month</span><b>'+gfmt(needFor(pay,v))+' views</b>':'<span>Type a CPM to see the views you need</span><b></b>'}
+  I.oninput=sum;sum();
+  document.getElementById('x').onclick=closeSheet;
+  document.getElementById('ok').onclick=async function(){
+    var v=val(),e=document.getElementById('cerr');e.textContent='';
+    if(!(v>0&&v<=1000)){e.textContent='Type a CPM goal, like 3 for $3.00.';return}
+    var cp=Object.assign({},(user.user_metadata&&user.user_metadata.cpm)||{});cp[monthNow()]=Math.round(v*100)/100;
+    var b=document.getElementById('ok');b.disabled=true;b.textContent='Saving...';
+    var r=await sb.auth.updateUser({data:{cpm:cp}});
+    if(r.error){b.disabled=false;b.textContent='Save goal';e.textContent=r.error.message;return}
+    if(r.data&&r.data.user)user=r.data.user;closeSheet();toast('CPM goal saved.',true);paintSetup();if(otApi)otApi.redraw();paintStats(true);
+  };
+}
+
+/* ---------- Stats screen: All goals ($5 → $1) and My goal ---------- */
+var gTab='all';
+function ownViews(m){return ((otApi&&otApi.orders)||[]).filter(function(o){return o.month===m&&(!o._by||!user||o._by===user.id)}).reduce(function(t,o){return t+(+((o.real||{}).views)||0)},0)}
+function gTrack(frac,views,cur,ticks,labs){
+  return '<div class="gtrk" data-frac="'+Math.max(0,Math.min(1,frac))+'" data-some="'+(views>0?1:0)+'"><div class="gbub"><b>'+gfmt(views)+'</b> views'+(cur?' · <b>'+cpmTxt(cur)+'</b>':'')+'<i></i></div>'+
+    '<div class="gbar"><span class="gfill"></span>'+ticks.map(function(p){return '<span class="gtick" style="left:'+(p*100)+'%"></span>'}).join('')+'</div>'+
+    '<div class="glabs">'+labs.map(function(x){return '<span class="glab'+(x.p>=1?' end':'')+'" style="left:'+(x.p*100)+'%"><b>'+x.t+'</b><small>'+x.s+'</small></span>'}).join('')+'</div></div>';
+}
+function paintStats(anim){
+  var el=document.getElementById('statsroot');if(!el)return;
+  if(!user||!canVideos()){el.innerHTML='';return}
+  var m=monthNow(),d=dealFor(m);
+  if(!d){el.innerHTML='<div class="gbox"><div class="gempty"><b>Set your monthly deal first</b><span>Your CPM goals come from it.</span><button class="btn" data-gdeal="1">Set monthly deal</button></div></div>';return}
+  var pay=payFor(d),views=ownViews(m),cur=views>0?pay/views*1000:null,c=cpmFor(m),h;
+  if(gTab==='all'){
+    var T=[5,4,3,2,1].map(function(t){return {t:t,v:pay/t*1000}}),stops=[0].concat(T.map(function(x){return x.v})),f=1;
+    for(var i=1;i<stops.length;i++){if(views<=stops[i]){f=(i-1+(views-stops[i-1])/(stops[i]-stops[i-1]))/(stops.length-1);break}}
+    h='<div class="gtl">Views toward CPM goals · '+(+d.count)+' '+(+d.count===1?'video':'videos')+'</div>'+
+      gTrack(f,views,cur,T.map(function(x,i){return (i+1)/T.length}),T.map(function(x,i){return {p:(i+1)/T.length,t:'$'+x.t,s:gfmt(x.v)}}));
+  }else if(!c){
+    h='<div class="gempty"><b>🎯 No CPM goal yet</b><span>Set one and every video gets a suggested views goal.</span><button class="btn" data-gcpm="1">Set CPM goal</button></div>';
+  }else{
+    var need=needFor(pay,c);
+    h='<div class="gmh"><div><div class="gcpm">🎯 '+cpmTxt(c,2)+' CPM</div><div class="gneed">needs '+gfmt(need)+' real views</div></div><button class="gchg" data-gcpm="1">✏️ Change</button></div>'+
+      gTrack(views/need,views,cur,[1],[{p:1,t:cpmTxt(c,2),s:gfmt(need)}]);
+  }
+  el.innerHTML='<div class="gbox"><div class="gtabs"><button data-gtab="all"'+(gTab==='all'?' class="on"':'')+'>All goals</button><button data-gtab="mine"'+(gTab==='mine'?' class="on"':'')+'>🎯 My goal</button></div>'+h+'</div>';
+  var t=el.querySelector('.gtrk');if(!t)return;
+  var fill=t.querySelector('.gfill'),bub=t.querySelector('.gbub'),W=t.querySelector('.gbar').offsetWidth,fr=+t.dataset.frac;
+  var px=Math.max(t.dataset.some==='1'?22:0,Math.round(fr*W)),bw=bub.offsetWidth,left=Math.max(0,Math.min(W-bw,px-40));
+  bub.style.left=left+'px';bub.querySelector('i').style.left=Math.max(16,Math.min(bw-16,px-left))+'px';bub.style.visibility='visible';
+  if(anim){fill.style.width='0px';requestAnimationFrame(function(){requestAnimationFrame(function(){fill.style.width=px+'px'})})}else{fill.style.transition='none';fill.style.width=px+'px'}
+}
+document.getElementById('statsroot').addEventListener('click',function(e){
+  var b=e.target.closest('[data-gtab],[data-gcpm],[data-gdeal]');if(!b)return;
+  if(b.dataset.gtab){if(gTab!==b.dataset.gtab){gTab=b.dataset.gtab;paintStats(true)}}
+  else if(b.dataset.gcpm)editCpm();else if(b.dataset.gdeal)editDeal();
+});
+window.addEventListener('resize',function(){if(scr==='stats')paintStats()});
 
 /* ---------- Instagram + auto-log ---------- */
 var IG={sql:false,acct:null};
@@ -914,6 +1083,7 @@ function setupSteps(){
   var a=IG.acct;
   return [
     {k:'deal',t:'Set your monthly deal',done:!!dealFor(monthNow()),sub:'Pay per video, agency cut and videos per month'},
+    {k:'cpm',t:'Set your CPM goal',done:!!cpmFor(monthNow()),sub:cpmFor(monthNow())?cpmTxt(cpmFor(monthNow()),2)+' CPM · needs '+gfmt(needFor(payFor(dealFor(monthNow())),cpmFor(monthNow())))+' real views':'Dollars per 1,000 real views you want this month'},
     {k:'ig',t:a&&!igOk()?'Reconnect Instagram':'Connect Instagram',done:!IG.sql||igOk(),soon:!IG.sql,sub:!IG.sql?'Coming soon':igOk()?'@'+(a.username||'connected'):'Choose Log in with Instagram on Meta\u2019s screen'},
     {k:'phrase',t:'Auto-log phrase / word',done:!!phraseNow(),sub:phraseNow()?'“'+phraseNow()+'”':'Posts with it in the caption log themselves'}];
 }
@@ -929,7 +1099,7 @@ function paintSetup(){
   if(otApi)otApi.redraw();
 }
 document.getElementById('setup').addEventListener('click',function(e){var b=e.target.closest('[data-step]');if(!b)return;var k=b.dataset.step;
-  if(k==='deal')editDeal();else if(k==='phrase')editPhrase();else if(k==='ig'){if(!IG.sql)toast('Connect Instagram is coming soon.');else if(igOk())openIgSettings();else igConnect()}});
+  if(k==='deal')editDeal();else if(k==='cpm')editCpm();else if(k==='phrase')editPhrase();else if(k==='ig'){if(!IG.sql)toast('Connect Instagram is coming soon.');else if(igOk())openIgSettings();else igConnect()}});
 function igReturn(){
   var m=location.search.match(/[?&]ig=([a-z]+)/);if(!m)return false;
   var dm=location.search.match(/[?&]d=([^&]*)/),det='';try{det=dm?decodeURIComponent(dm[1]):''}catch(e){det=''}
@@ -1102,20 +1272,22 @@ document.getElementById('mpage').addEventListener('click',async function(e){
 });
 
 /* ---------- swipe between the two screens ---------- */
-var scr='orders',sw=null,swUntil=0,scrY={orders:0,panels:0};
-function scrEl(n){return document.getElementById(n==='orders'?'oscreen':'pscreen')}
-function paintDots(){document.querySelectorAll('.dots button').forEach(function(b){b.classList.toggle('on',b.dataset.scr===scr)})}
+var scr='orders',sw=null,swUntil=0,scrY={orders:0,stats:0,panels:0};
+var SCR_NAME={orders:'Orders Tracker',stats:'Stats',panels:'Panels Tracker'};
+function screens(){var l=['orders'];if(user&&canVideos())l.push('stats');if(user&&canPanels())l.push('panels');return l}
+function scrEl(n){return document.getElementById(n==='orders'?'oscreen':n==='stats'?'sscreen':'pscreen')}
+function paintDots(){var l=screens();document.querySelectorAll('.dots').forEach(function(d){d.innerHTML=l.map(function(n){return '<button data-scr="'+n+'" aria-label="'+SCR_NAME[n]+'"'+(n===scr?' class="on"':'')+'></button>'}).join('');d.style.display=l.length>1?'flex':'none'})}
 function setScreen(n,dir){
-  if(n===scr||(n==='panels'&&!canPanels()))return;
+  var l=screens();if(n===scr||l.indexOf(n)<0)return;
   var from=scrEl(scr),to=scrEl(n);scrY[scr]=window.scrollY;
   from.style.display='none';from.style.transform='';from.style.opacity='';
-  scr=n;to.style.display='block';document.body.classList.toggle('ot-on',n==='orders');
+  var was=scr;scr=n;to.style.display='block';document.body.classList.toggle('ot-on',n!=='panels');if(n==='stats')paintStats(true);
   document.getElementById('menu').classList.remove('on');paintDots();window.scrollTo(0,scrY[n]||0);
-  if(dir==null)dir=n==='panels'?1:-1;
+  if(dir==null)dir=l.indexOf(n)>l.indexOf(was)?1:-1;
   try{to.animate([{transform:'translateX('+(dir*36)+'%)',opacity:.3},{transform:'none',opacity:1}],{duration:260,easing:'cubic-bezier(.2,.8,.2,1)'})}catch(e){}
 }
 function canSwipe(t){
-  if(!user||!canPanels()||editing||drag||dragging)return false;
+  if(!user||screens().length<2||editing||drag||dragging)return false;
   if(document.getElementById('mpage').classList.contains('on'))return false;
   if(document.getElementById('veil').style.display==='flex'||document.getElementById('cpage').classList.contains('on')||document.getElementById('login').style.display==='flex')return false;
   if(t.closest&&t.closest('#tabs,.ot-seg,.ot-who,input,textarea,select,.ot-pop,#menu'))return false;
@@ -1141,8 +1313,9 @@ function swEnd(){
   if(!sw)return;var s=sw;sw=null;if(!s.on)return;
   swUntil=Date.now()+500;setTimeout(function(){document.body.classList.remove('swiping')},30);
   var el=scrEl(scr);
-  if(Math.abs(s.dx)>Math.min(80,innerWidth*.2)){
-    var dir=s.dx<0?1:-1,next=scr==='orders'?'panels':'orders';
+  var l=screens(),next=l[l.indexOf(scr)+(s.dx<0?1:-1)];
+  if(next&&Math.abs(s.dx)>Math.min(80,innerWidth*.2)){
+    var dir=s.dx<0?1:-1;
     var a=null;try{a=el.animate([{transform:'translateX('+s.dx+'px)',opacity:el.style.opacity},{transform:'translateX('+(-dir*100)+'%)',opacity:0}],{duration:160,easing:'ease-in'})}catch(e){}
     var go=function(){setScreen(next,dir)};if(a)a.onfinish=go;else go();
   }else{

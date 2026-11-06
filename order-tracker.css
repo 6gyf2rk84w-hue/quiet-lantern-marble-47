@@ -190,3 +190,9 @@ span.ot-side{visibility:hidden}
 .ot .ot-orderall{flex:none;border:0;border-radius:999px;padding:11px 18px;background:var(--ot-green);color:#000;font-weight:900;font-size:15px;letter-spacing:-.01em}
 /* pop-ups in the middle of the screen */
 .ot-pop{place-items:center}
+/* 🎯 suggested views goal (from the month's CPM goal) */
+.ot .ot-sg{align-self:flex-start;display:inline-flex;align-items:baseline;gap:7px;border:1.5px solid rgba(27,224,127,.55);background:rgba(27,224,127,.13);color:var(--ot-green);border-radius:999px;padding:7px 14px;font:800 14px/1.2 var(--ot-font)}
+.ot .ot-sg b{font-family:var(--ot-display);font-size:17px;color:#fff;letter-spacing:-.01em}
+.ot .ot-sg small{font-size:12px;font-weight:700;color:var(--ot-soft)}
+.ot button.ot-sg:active{transform:scale(.97)}
+.ot .ot-sg.hit{border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:var(--ot-soft)}
