@@ -834,9 +834,16 @@ async function igCall(body){
 }
 async function igConnect(){
   if(!IG.sql){toast('Connect Instagram is coming soon.');return}
-  toast('Opening Meta sign-in. Choose Log in with Instagram.',true);
+  toast(isAdmin?'Connecting...':'Opening Meta sign-in. Choose Log in with Instagram.',true);
   var r=await igCall({action:'connect'});
   if(r.url){location.href=r.url;return}
+  if(r.connected){await loadIg();paintSetup();toast(r.status==='limited'?'Instagram connected, but views, shares, saves and reposts are blocked. Add instagram_manage_insights to the OT bot key.':'Instagram connected: @'+(r.username||'you')+'.',r.status!=='limited');igSync(true);return}
+  if(/^owner_key/.test(r.error||'')){
+    var why=r.error==='owner_key_no_account'?'Your OT bot key works, but it can\u2019t see your Instagram. In your business settings, give OT bot your Instagram account and its Page, then try again.':r.error==='owner_key_other_app'?'That key was made for a different Meta app. Generate the OT bot key for the OT app, then save it again.':'Your OT bot key isn\u2019t working. Generate a new one and save it again as OWNER_IG_KEY.';
+    var dt='Owner connect details:\n'+JSON.stringify(r.details||{});
+    openSheet('<h3>Couldn\u2019t connect your Instagram</h3><p class="pinfo">'+why+'</p><div class="invbox" style="font-size:12.5px;max-height:30vh;overflow:auto">'+esc(JSON.stringify(r.details||{}))+'</div><button class="btn" id="ok">Copy details</button><button class="btn alt" id="x">Close</button>');
+    document.getElementById('ok').onclick=function(){copyText(dt)};document.getElementById('x').onclick=closeSheet;return;
+  }
   toast(/not_configured|not found|Failed to send|404/i.test(r.error||'')?'Connect Instagram is coming soon.':'Could not open Instagram: '+(r.error||'try again'));
 }
 function igDisconnect(){

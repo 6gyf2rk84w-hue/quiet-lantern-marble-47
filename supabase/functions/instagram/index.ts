@@ -12,6 +12,9 @@
 //                                  (people who connected before it was added must reconnect)
 //   IG_TOKEN_KEY                   any long random text; used to encrypt saved tokens
 //   CRON_SECRET                any long random text; lets the 15-minute schedule run auto-log for everyone
+//   OWNER_IG_KEY (optional)    the owner's own key: a system user ("OT bot") in the business portfolio that owns
+//                              this Meta app, with the owner's Instagram (and its Page) assigned. Meta won't hand the
+//                              owner's account to the app's own portfolio through the sign-in, so the owner uses this.
 //   APP_URL (optional)         where to send people back to after connecting
 // Deploy with "Verify JWT" turned OFF: Meta sends people back here without a Supabase login.
 // The function checks the login itself for everything else.
@@ -292,6 +295,38 @@ Deno.serve(async (req: Request) => {
     if (!who) return json({ error: "Not allowed" }, 403);
 
     if (action === "connect") {
+      // The owner connects with the OT bot key instead of Meta's sign-in
+      const { data: isOwner } = await admin.from("admins").select("user_id").eq("user_id", who.id).maybeSingle();
+      const key = env("OWNER_IG_KEY");
+      if (isOwner && key) {
+        const diag: Record<string, unknown> = {};
+        const note = (e: unknown) => e instanceof IgError ? `#${e.code} ${e.message}`.slice(0, 140) : String((e as Error)?.message || e).slice(0, 140);
+        let acct: { id: string; username: string } | null = null, insightsOk = true;
+        try {
+          const dbg = (await ig(`${GRAPH}/debug_token`, "", { input_token: key, access_token: `${env("META_APP_ID")}|${env("META_APP_SECRET")}` }))?.data || null;
+          diag.debug = { type: dbg?.type, valid: dbg?.is_valid, app: dbg?.app_id === env("META_APP_ID") ? "OT" : "other app", scopes: dbg?.scopes };
+          if (dbg && dbg.is_valid === false) return json({ error: "owner_key_invalid", details: diag });
+          if (dbg?.app_id && dbg.app_id !== env("META_APP_ID")) return json({ error: "owner_key_other_app", details: diag });
+          const scopes: string[] = dbg?.scopes || [];
+          if (scopes.length && !scopes.includes("instagram_manage_insights")) insightsOk = false;
+        } catch (e) { diag.debug = note(e); }
+        try { const d = (await ig("me/assigned_instagram_accounts", key, { fields: "id,username,name" }))?.data || []; diag.assigned = d.length; if (d[0]?.id) acct = { id: String(d[0].id), username: d[0].username || d[0].name || "" }; }
+        catch (e) { diag.assigned = note(e); if (e instanceof IgError && e.code === 190) return json({ error: "owner_key_invalid", details: diag }); }
+        if (!acct) try {
+          const pages = (await ig("me/accounts", key, { fields: "instagram_business_account{id,username,name}", limit: "100" }))?.data || [];
+          diag.pages = pages.length;
+          const a = pages.map((p: any) => p?.instagram_business_account).find((x: any) => x?.id);
+          if (a) acct = { id: String(a.id), username: a.username || a.name || "" };
+        } catch (e) { diag.pages = note(e); }
+        if (!acct) { console.log("instagram owner key: no account", JSON.stringify(diag)); return json({ error: "owner_key_no_account", details: diag }); }
+        const now = new Date().toISOString();
+        const { error } = await admin.from("ig_accounts").upsert({
+          user_id: who.id, ig_user_id: acct.id, page_id: null, username: acct.username, token: await seal(key),
+          expires_at: null, status: insightsOk ? "ok" : "limited", connected_at: now, refreshed_at: now,
+        });
+        if (error) return json({ error: error.message }, 500);
+        return json({ connected: true, username: acct.username, status: insightsOk ? "ok" : "limited" });
+      }
       const state = b64(crypto.getRandomValues(new Uint8Array(24))).replace(/[+/=]/g, "");
       await admin.from("ig_states").delete().lt("created_at", new Date(Date.now() - 3600e3).toISOString());
       const { error } = await admin.from("ig_states").insert({ state, user_id: who.id });
