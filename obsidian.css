@@ -300,3 +300,24 @@ html,body{background:#060A18}
 /* Panels: pencil for Edit mode in the title row */
 #pdone.pen{width:40px;padding:0;justify-content:center;border-radius:12px;background:linear-gradient(180deg,#2B3550,#141B2E)!important;border:1px solid #2E3A5C!important;color:var(--ink)!important}
 #pdone svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Connections: sections, green connected rows, red press-in Disconnect, panel guide */
+.csec{margin:14px 2px 8px;font:700 12px/1 var(--ob-font);letter-spacing:.09em;text-transform:uppercase;color:var(--ob-steel)}
+#sheet h3+.csec{margin-top:4px}
+.crow{position:relative}
+.cdot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--ob-G);box-shadow:0 0 0 3px rgba(52,211,153,.15),0 0 10px var(--ob-G)}
+.cdot.bad{background:var(--ob-R);box-shadow:0 0 0 3px rgba(244,63,94,.15),0 0 10px var(--ob-R)}
+.cok{color:var(--ob-G)!important;text-shadow:0 0 12px rgba(52,211,153,.55)}
+.xdis{flex:none;padding:9px 14px;border-radius:12px;border:1px solid rgba(244,63,94,.55);background:rgba(244,63,94,.08);color:#FF6B85;font:700 14px/1 var(--ob-font);transition:transform .08s,background .08s,color .08s,box-shadow .08s}
+.xdis:active{transform:scale(.94) translateY(1px);background:#E11D48;color:#fff;border-color:#E11D48;box-shadow:0 0 16px rgba(244,63,94,.6),inset 0 2px 4px rgba(0,0,0,.35)}
+.ctag{flex:none;font:600 12px/1 var(--ob-font);color:var(--ob-steel);border:1px solid var(--line);border-radius:999px;padding:6px 9px}
+.btn.padd{margin-top:2px}
+.cpick{width:100%;text-align:left;color:var(--ink);font:inherit;cursor:pointer}
+.cpick .chev{color:var(--ob-steel);font-size:22px}
+.gstep{display:flex;gap:12px;align-items:flex-start;padding:10px 2px}
+.gstep>div{flex:1;min-width:0}.gstep b{display:block;font-size:15.5px}
+.gn{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:800 13px/1 var(--ob-font);color:#fff;background:linear-gradient(180deg,var(--ob-V1),var(--ob-V2))}
+.glink{display:inline-block;margin-top:8px;padding:8px 12px;border-radius:10px;border:1px solid #2E3A5C;background:#121A30;color:#C9D4FF;font:600 14px/1 var(--ob-font);text-decoration:none}
+.glink:active{transform:scale(.97)}
+.gwarn{margin:4px 0 6px;padding:11px 13px;border-radius:12px;border:1px solid rgba(245,165,36,.55);background:rgba(245,165,36,.12);color:#FFD27A;font-size:14px;line-height:1.4}
+#pkey{margin-top:4px}

@@ -1155,7 +1155,7 @@ async function igPreview(o){
 }
 function editPhrase(){
   if(!canVideos())return;
-  openSheet('<h3>Auto-log phrase / word</h3><div class="pinfo">Put this in a post’s caption and it logs itself as your next video. Capitals and extra spaces don’t matter.</div><input type="text" id="aph" placeholder="e.g. fresh drop with sam" autocomplete="off" autocapitalize="off" maxlength="80"><div class="pinfo" style="margin-top:8px">A short phrase is safest. If you use a single word, make it one you wouldn’t normally write.</div><div class="perr" id="aerr"></div><button class="btn" id="ok">Save</button><button class="btn alt" id="x">Cancel</button>');
+  openSheet('<h3>Auto-log phrase</h3><div class="pinfo">Put this in a post’s caption and it logs itself as your next video. Capitals and extra spaces don’t matter.</div><input type="text" id="aph" placeholder="e.g. fresh drop with sam" autocomplete="off" autocapitalize="off" maxlength="80"><div class="pinfo" style="margin-top:8px">A short phrase is safest. If you use a single word, make it one you wouldn’t normally write.</div><div class="perr" id="aerr"></div><button class="btn" id="ok">Save</button><button class="btn alt" id="x">Cancel</button>');
   var f=document.getElementById('aph');f.value=phraseNow();
   document.getElementById('x').onclick=closeSheet;
   async function store(v){
@@ -1176,13 +1176,64 @@ function editPhrase(){
 }
 function openIgSettings(){
   document.getElementById('menu').classList.remove('on');
-  var a=IG.acct,ph=phraseNow();
-  var ig=!IG.sql?'<span class="stx">Coming soon</span>':a?(a.status==='ok'?'<span class="stx ok">@'+esc(a.username||'connected')+' connected</span>':a.status==='limited'?'<span class="stx ok">@'+esc(a.username||'connected')+' connected</span><span class="stx bad">Views, shares, saves and reposts are blocked. Reconnect to fix it.</span>':'<span class="stx bad">Needs reconnecting</span>'):'<span class="stx">Not connected</span>';
-  openSheet('<h3>Connections</h3><div class="srow"><div><b>Instagram</b>'+ig+'</div>'+(IG.sql?(a&&a.status==='ok'?'<button class="sbtn" id="igd">Disconnect</button>':'<button class="sbtn go" id="igc">'+(a?'Reconnect':'Connect')+'</button>'):'')+(IG.sql&&a&&a.status==='limited'?'<button class="sbtn" id="igd" style="margin-left:6px">Disconnect</button>':'')+'</div><div class="srow"><div><b>Auto-log phrase / word</b><span class="stx">'+(ph?'“'+esc(ph)+'”':'Not set')+'</span></div><button class="sbtn" id="iph">'+(ph?'Change':'Set')+'</button></div>'+(IG.sql&&(!IG.acct||IG.acct.status!=='ok')?'<div class="pinfo">On Meta\u2019s sign-in screen, choose <b>Log in with Instagram</b>, then tap Continue. Your Instagram must be a Creator or Business account.</div>':'')+'<button class="btn alt" id="x">Close</button>');
+  var a=IG.acct,ph=phraseNow(),h='<h3>Connections</h3><div class="csec">Instagram</div>';
+  if(!IG.sql)h+='<div class="srow"><div><b>Not connected</b><span class="stx">Coming soon</span></div></div>';
+  else if(a&&(a.status==='ok'||a.status==='limited'))h+='<div class="srow crow"><span class="cdot"></span><div><b class="cok">@'+esc(a.username||'connected')+'</b><span class="stx ok">Connected</span>'+(a.status==='limited'?'<span class="stx bad">Views, shares, saves and reposts are blocked. Reconnect to fix it.</span>':'')+'</div>'+(a.status==='limited'?'<button class="sbtn go" id="igc">Reconnect</button>':'')+'<button class="xdis" id="igd">Disconnect</button></div>';
+  else h+='<div class="srow"><div><b>'+(a?'Needs reconnecting':'Not connected')+'</b></div><button class="sbtn go" id="igc">'+(a?'Reconnect':'Connect')+'</button></div>';
+  h+='<div class="srow"><div><b>Auto-log phrase</b><span class="stx">'+(ph?'“'+esc(ph)+'”':'Not set')+'</span></div><button class="sbtn" id="iph">'+(ph?'Change':'Set')+'</button></div>';
+  if(IG.sql&&(!a||a.status!=='ok'))h+='<div class="pinfo">On Meta’s sign-in screen, choose <b>Log in with Instagram</b>, then tap Continue. Your Instagram must be a Creator or Business account.</div>';
+  h+='<div class="csec">Panels</div><div id="cpans"><div class="srow"><div><span class="stx">Checking your panels…</span></div></div></div><button class="btn padd" id="padd">+ Add a panel</button><button class="btn alt" id="x">Close</button>';
+  openSheet(h);
   document.getElementById('x').onclick=closeSheet;
   var c=document.getElementById('igc');if(c)c.onclick=igConnect;
   var d=document.getElementById('igd');if(d)d.onclick=igDisconnect;
   document.getElementById('iph').onclick=editPhrase;
+  document.getElementById('padd').onclick=addPanel;
+  paintPanels();
+}
+/* ---------- Panels in Connections: each person connects their own panel keys ---------- */
+var PCAT=null;
+async function panelCatalog(){if(PCAT)return PCAT;var r=await panelCall('',{action:'catalog'});if(!r.error&&r.sites)PCAT=r.sites;return r.error?{error:r.error}:(r.sites||[])}
+function panelBal(p){return p.error?'<span class="stx bad">'+esc(p.error)+'</span>':(p.balance==null?'<span class="stx ok">Connected</span>':'<span class="stx">Balance '+esc(money(p.balance))+(p.currency&&p.currency!=='USD'?' '+esc(p.currency):'')+'</span>')}
+async function paintPanels(){
+  var r=await panelCall('',{action:'list'}),el=document.getElementById('cpans');if(!el)return;
+  if(r.error){el.innerHTML='<div class="srow"><div><span class="stx bad">'+esc(r.error)+'</span></div></div>';return}
+  var ps=r.panels||[];
+  if(!ps.length){el.innerHTML='<div class="srow"><div><b>No panels yet</b><span class="stx">Tap Add a panel to connect your first one.</span></div></div>';return}
+  el.innerHTML=ps.map(function(p){return '<div class="srow crow"><span class="cdot'+(p.error?' bad':'')+'"></span><div><b class="'+(p.error?'':'cok')+'">'+esc(p.name)+'</b>'+panelBal(p)+'</div>'+(p.saved?'<button class="xdis" data-pdis="'+esc(p.id)+'" data-pname="'+esc(p.name)+'">Disconnect</button>':'<span class="ctag">Owner key</span>')+'</div>'}).join('');
+  el.querySelectorAll('[data-pdis]').forEach(function(b){b.onclick=function(){var id=b.dataset.pdis,nm=b.dataset.pname;
+    openSheet('<h3>Are you sure?</h3><p style="color:var(--mute);margin:0 0 14px">Are you sure you want to disconnect '+esc(nm)+'? You can connect it again any time with a new key.</p><button class="btn dangerbtn" id="yes">Yes, disconnect</button><button class="btn alt" id="x">Cancel</button>');
+    document.getElementById('x').onclick=openIgSettings;
+    document.getElementById('yes').onclick=async function(){var y=this;y.disabled=true;y.textContent='Disconnecting…';var r2=await panelCall(id,{action:'disconnect'});
+      if(r2.error){y.disabled=false;y.textContent='Yes, disconnect';toast(r2.error);return}toast(nm+' disconnected.',true);openIgSettings()}}});
+}
+async function addPanel(){
+  openSheet('<h3>Add a panel</h3><div class="pinfo">Pick the panel you want to connect.</div><div id="pcat"><div class="srow"><div><span class="stx">Loading…</span></div></div></div><button class="btn alt" id="x">Back</button>');
+  document.getElementById('x').onclick=openIgSettings;
+  var cat=await panelCatalog(),el=document.getElementById('pcat');if(!el)return;
+  if(cat.error){el.innerHTML='<div class="srow"><div><span class="stx bad">'+esc(cat.error)+'</span></div></div>';return}
+  if(!cat.length){el.innerHTML='<div class="srow"><div><span class="stx">No panels are set up yet.</span></div></div>';return}
+  el.innerHTML=cat.map(function(p){return '<button class="srow cpick" data-pk="'+esc(p.id)+'"><div><b>'+esc(p.name)+'</b></div><span class="chev">›</span></button>'}).join('');
+  el.onclick=function(e){var b=e.target.closest('[data-pk]');if(!b)return;var p=cat.find(function(x){return x.id===b.dataset.pk});if(p)panelGuide(p)};
+}
+function safeUrl(u){return /^https:\/\/[^\s"'<>]+$/i.test(String(u||''))?u:''}
+function panelGuide(p){
+  var su=safeUrl(p.signup_url),ku=safeUrl(p.key_url);
+  openSheet('<h3>Connect '+esc(p.name)+'</h3>'
+    +'<div class="gstep"><span class="gn">1</span><div><b>Make an account</b><span class="stx">Already have one? Skip this.</span>'+(su?'<a class="glink" href="'+esc(su)+'" target="_blank" rel="noopener">Sign up on '+esc(p.name)+' ↗</a>':'')+'</div></div>'
+    +'<div class="gstep"><span class="gn">2</span><div><b>Get your API key</b><span class="stx">Open the API page, tap Generate, then copy the key.</span>'+(ku?'<a class="glink" href="'+esc(ku)+'" target="_blank" rel="noopener">Open the API page ↗</a>':'')+'</div></div>'
+    +'<div class="gwarn">⚠️ Copy your key right away. Some sites only show it for a few seconds, so be ready to take a screenshot before you tap Generate. Delete the screenshot once you’ve pasted it.</div>'
+    +'<div class="gstep"><span class="gn">3</span><div><b>Paste it here</b><span class="stx">It’s saved privately and never shown again.</span></div></div>'
+    +'<input type="password" id="pkey" placeholder="Paste your API key" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"><div class="perr" id="pkerr"></div>'
+    +'<button class="btn" id="pgo">Connect</button><button class="btn alt" id="x">Back</button>');
+  document.getElementById('x').onclick=addPanel;
+  var go=document.getElementById('pgo');
+  go.onclick=async function(){var k=document.getElementById('pkey').value.trim(),e=document.getElementById('pkerr');e.textContent='';
+    if(!k){e.textContent='Paste your key first.';return}if(/^\*+$/.test(k)){e.textContent='That copied the stars, not the key. Copy the real key and try again.';return}
+    go.disabled=true;go.textContent='Checking your key…';
+    var r=await panelCall(p.id,{action:'connect',key:k});
+    if(r.error||!r.ok){go.disabled=false;go.textContent='Connect';e.textContent=r.error||'That key did not work.';return}
+    toast(p.name+' connected'+(r.balance!=null?' · balance '+money(r.balance):'')+'.',true);openIgSettings()};
 }
 function setupSteps(){
   var a=IG.acct;
@@ -1190,7 +1241,7 @@ function setupSteps(){
     {k:'deal',t:'Set your monthly deal',done:!!dealFor(monthNow()),sub:'Pay per video, agency cut and videos per month'},
     {k:'cpm',t:'Set your CPM goal',done:!!cpmFor(monthNow()),sub:cpmFor(monthNow())?cpmTxt(cpmFor(monthNow()),2)+' CPM · needs '+gfmt(needFor(payFor(dealFor(monthNow())),cpmFor(monthNow())))+' real views':'Dollars per 1,000 real views you want this month'},
     {k:'ig',t:a&&!igOk()?'Reconnect Instagram':'Connect Instagram',done:!IG.sql||igOk(),soon:!IG.sql,sub:!IG.sql?'Coming soon':igOk()?'@'+(a.username||'connected'):'Choose Log in with Instagram on Meta\u2019s screen'},
-    {k:'phrase',t:'Auto-log phrase / word',done:!!phraseNow(),sub:phraseNow()?'“'+phraseNow()+'”':'Posts with it in the caption log themselves'}];
+    {k:'phrase',t:'Auto-log phrase',done:!!phraseNow(),sub:phraseNow()?'“'+phraseNow()+'”':'Posts with it in the caption log themselves'}];
 }
 function setupShown(){if(!user||!canVideos())return false;return setupSteps().some(function(s){return !s.done})}
 function paintSetup(){
