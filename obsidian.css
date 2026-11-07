@@ -338,3 +338,12 @@ html,body{background:#060A18}
 
 /* service picker total sits level with the amount */
 #pkc{align-items:center}
+
+/* panel balances: on the pick screen and on the total screen */
+.bok{color:var(--ob-G)}.bbad{color:var(--ob-R)}
+.oeh .oset{color:var(--ob-G)}
+.obal{margin:-2px 0 10px;display:grid;gap:6px}
+.obl{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;border:1px solid var(--line);background:#060A14;font-size:14px}
+.obl span{font-weight:700}.obl em{font-style:normal;color:var(--ob-steel);text-align:right}
+.obl.ok{border-color:rgba(52,211,153,.4)}.obl.ok em{color:var(--ob-G);text-shadow:0 0 10px rgba(52,211,153,.45)}
+.obl.bad{border-color:rgba(244,63,94,.5);background:rgba(244,63,94,.07)}.obl.bad em{color:#FF6B85}

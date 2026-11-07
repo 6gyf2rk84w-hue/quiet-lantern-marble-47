@@ -523,6 +523,9 @@ function openIcon(id){
   var rm=document.getElementById('rm');if(rm)rm.onclick=function(){askDel('section icon',function(){delete n.img;save();closeSheet();render()})};
   document.getElementById('x').onclick=closeSheet;
 }
+var BAL={};
+function balFor(site){var c=BAL[site];if(c&&Date.now()-c.t<60000)return Promise.resolve(c.r);return panelCall(site,{action:'balance'}).then(function(r){BAL[site]={t:Date.now(),r:r};return r})}
+function balTxt(r){return !r?'':r.error?'not connected':money(r.balance)}
 function siteOf(o){var n=node(o.node);return n?String(n.title).toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0]:''}
 function apvHtml(o){
   if(o.status!=='working')return '';
@@ -823,7 +826,7 @@ async function pickService(v,stat,done,step){
   if(full){
     var sec=S.nodes.find(function(n){return n.parent===null&&n.title.trim().toLowerCase()===nm.toLowerCase()});
     var ids=sec?kids(sec.id).map(function(x){return x.id}):[];
-    items=S.orders.filter(function(o){return ids.indexOf(o.node)>=0}).map(function(o){var st=node(o.node);return {id:o.id,name:o.title,price:ppk(o.price),site:st?st.title:'',status:o.status,ok:!!o.approved}});
+    items=S.orders.filter(function(o){return ids.indexOf(o.node)>=0}).map(function(o){var st=node(o.node);return {id:o.id,name:o.title,price:ppk(o.price),site:st?st.title:'',key:siteOf(o),status:o.status,ok:!!o.approved}});
     if(!sec)note='There’s no “'+esc(nm)+'” section on your Panels screen yet, so there are no services to pick. You can still set a goal below.';
   }else{
     openSheet(head+'<div class="pk-none">Loading services...</div>');
@@ -837,7 +840,7 @@ async function pickService(v,stat,done,step){
   function item(){return sel?items.find(function(i){return i.id===sel}):null}
   function list(){
     if(note)return '<div class="pk-none">'+note+'</div>';
-    return items.map(function(o){return '<button class="pk-row'+(o.id===sel?' on':'')+'" data-pk="'+esc(o.id)+'"><span style="min-width:0"><b>'+esc(o.name)+'</b>'+(full?'<small>'+esc(o.site)+(o.ok?' · ✓ Approved':'')+'</small>':'')+'</span><span class="pp">'+usd2(o.price)+' / 1K</span></button>'}).join('');
+    return items.map(function(o){return '<button class="pk-row'+(o.id===sel?' on':'')+'" data-pk="'+esc(o.id)+'"><span style="min-width:0"><b>'+esc(o.name)+'</b>'+(full?'<small>'+esc(o.site)+(o.ok?' · ✓ Approved':'')+(o.key&&BAL[o.key]?' · <span class="'+(BAL[o.key].r.error?'bbad':'bok')+'">'+esc(balTxt(BAL[o.key].r))+'</span>':'')+'</small>':'')+'</span><span class="pp">'+usd2(o.price)+' / 1K</span></button>'}).join('');
   }
   function cost(){var q=qnum(document.getElementById('pkq').value),o=item();
     document.getElementById('pkc').innerHTML='<span>Total</span><b>'+usd2(o?o.price*q/1000:0)+'</b>';
@@ -846,6 +849,8 @@ async function pickService(v,stat,done,step){
   var saveTxt=step?(step.i<step.n?'Save & next':'Save & finish'):'Save';
   openSheet(head+'<div class="pk-list" id="pkl"></div><label class="fl2" for="pkq">Amount wanted</label><input type="text" id="pkq" inputmode="numeric" placeholder="How many '+esc(nm.toLowerCase())+'?" value="'+(had?esc(v.goals[stat]):'')+'" autocomplete="off"><div class="pk-cost" id="pkc"></div><button class="btn" id="ok">'+saveTxt+'</button>'+(step?'<button class="btn alt" id="sk">Skip '+esc(nm.toLowerCase())+'</button>':(had?'<button class="btn alt" id="rm" style="color:var(--bad)">Remove '+esc(nm.toLowerCase())+'</button>':''))+'<button class="btn alt" id="x">'+(step?'Stop here':'Cancel')+'</button>');
   paint();
+  if(full){var keys=items.map(function(i){return i.key}).filter(function(k,i,a){return k&&a.indexOf(k)===i});
+    Promise.all(keys.map(balFor)).then(function(){if(document.getElementById('pkl'))paint()})}
   document.getElementById('pkl').onclick=function(e){var b=e.target.closest('[data-pk]');if(!b)return;sel=sel===b.dataset.pk?null:b.dataset.pk;paint()};
   document.getElementById('pkq').oninput=cost;
   document.getElementById('ok').onclick=function(){
@@ -1294,10 +1299,20 @@ function orderSheet(list,single){
     list.forEach(function(x){var pl=planned(x),t=pl.reduce(function(a,r){return a+r.cost},0);total+=t;rows+='<div class="osr"><span><b>'+esc(x.title||'Untitled video')+'</b><small>'+(pl.length?pl.map(function(r){return STAT_NAME[r.s]}).join(', '):'Nothing to order yet')+'</small></span><em>'+(pl.length?usd2(t):'')+'</em></div>'});
   }
   var live=single&&isAdmin;
-  openSheet('<h3>'+(single?'Place order':'Order everything')+'</h3>'+(single?'<p class="pinfo">'+esc(v.title||'This video')+'</p>':'<p class="pinfo">Every video still running this month.</p>')+'<div class="osl">'+rows+'</div><div class="pk-cost"><span>Total</span><b>'+usd2(total)+'</b></div><div class="perr" id="poerr"></div><button class="btn" id="pay"'+(live?'':' disabled style="opacity:.45"')+'><svg class="lk" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Pay &amp; place order'+(single?'':'s')+'</button>'+(live?'<p class="pinfo" style="text-align:center;margin-top:-4px">Orders go out on your connected panels.</p>':'<p class="pinfo" style="text-align:center;margin-top:-4px">'+(single?'Placing orders from here is owner-only while we test.':'Order everything goes live after single orders are tested.')+'</p>')+(single?'<button class="btn alt" id="chg">Change services</button>':'')+'<button class="btn alt" id="x">Close</button>');
+  openSheet('<h3>'+(single?'Place order':'Order everything')+'</h3>'+(single?'<p class="pinfo">'+esc(v.title||'This video')+'</p>':'<p class="pinfo">Every video still running this month.</p>')+'<div class="osl">'+rows+'</div><div class="pk-cost"><span>Total</span><b>'+usd2(total)+'</b></div>'+(isAdmin?'<div class="obal" id="obal"></div>':'')+'<div class="perr" id="poerr"></div><button class="btn" id="pay"'+(live?'':' disabled style="opacity:.45"')+'><svg class="lk" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Pay &amp; place order'+(single?'':'s')+'</button>'+(live?'<p class="pinfo" style="text-align:center;margin-top:-4px">Orders go out on your connected panels.</p>':'<p class="pinfo" style="text-align:center;margin-top:-4px">'+(single?'Placing orders from here is owner-only while we test.':'Order everything goes live after single orders are tested.')+'</p>')+(single?'<button class="btn alt" id="chg">Change services</button>':'')+'<button class="btn alt" id="x">Close</button>');
   if(single)document.getElementById('chg').onclick=function(){logWizard(v,function(s,res){return otApi.setStat(v,s,res)})};
   document.getElementById('x').onclick=closeSheet;
   if(live)document.getElementById('pay').onclick=function(){confirmPlace(v)};
+  if(isAdmin)paintNeeds(list);
+}
+function paintNeeds(list){
+  var need={},names={};
+  list.forEach(function(v){planned(v).forEach(function(r){var p=(v.plan||{})[r.s]||{},rec=S.orders.find(function(o){return o.id===p.ref});if(!rec)return;var k=siteOf(rec);if(!k)return;need[k]=(need[k]||0)+r.cost;names[k]=node(rec.node)?node(rec.node).title:k})});
+  var keys=Object.keys(need),el=document.getElementById('obal');if(!el||!keys.length)return;
+  function row(k){var b=BAL[k]&&BAL[k].r,have=b&&!b.error?Number(b.balance):null,ok=have!=null&&have>=need[k];
+    return '<div class="obl'+(b?(ok?' ok':' bad'):'')+'"><span>'+esc(names[k])+'</span><em>needs '+usd2(need[k])+' · '+(!b?'checking\u2026':b.error?'not connected':'has '+esc(money(have)))+(b?(ok?' \u2713':' \u2715'):'')+'</em></div>'}
+  el.innerHTML=keys.map(row).join('');
+  Promise.all(keys.map(balFor)).then(function(){var e=document.getElementById('obal');if(e)e.innerHTML=keys.map(row).join('')});
 }
 
 /* ---------- Real orders: check everything first, then place each one once ---------- */
@@ -1359,7 +1374,7 @@ async function serviceItems(stat){
   if(canPanels()){
     var sec=S.nodes.find(function(n){return n.parent===null&&n.title.trim().toLowerCase()===nm});if(!sec)return [];
     var ids=kids(sec.id).map(function(x){return x.id});
-    return S.orders.filter(function(o){return ids.indexOf(o.node)>=0&&o.status==='working'}).map(function(o){var st=node(o.node);return {id:o.id,name:o.title,price:ppk(o.price),site:st?st.title:''}});
+    return S.orders.filter(function(o){return ids.indexOf(o.node)>=0&&o.status==='working'}).map(function(o){var st=node(o.node);return {id:o.id,name:o.title,price:ppk(o.price),site:st?st.title:'',key:siteOf(o)}});
   }
   var r=await sb.rpc('service_catalog');if(r.error)return [];
   return (r.data||[]).filter(function(x){return x.stat===nm}).map(function(x){return {id:String(x.id),name:x.name,price:ppk(x.price),site:''}});
@@ -1368,31 +1383,36 @@ async function orderEverything(list){
   if(!canVideos()||!list.length)return;
   openSheet('<h3>Order everything</h3><div class="pk-none">Loading services...</div>');
   var rows=[];
-  for(var i=0;i<STAT_ORDER.length;i++){var s=STAT_ORDER[i],need=list.filter(function(v){return !((v.plan||{})[s])});if(!need.length)continue;rows.push({s:s,need:need,items:await serviceItems(s),pick:'',amt:''})}
-  if(!rows.length){orderSheet(list,false);return}
+  for(var i=0;i<STAT_ORDER.length;i++){var s=STAT_ORDER[i],need=list.filter(function(v){return !((v.plan||{})[s])}),have=list.filter(function(v){return !!((v.plan||{})[s])});
+    var refs=have.map(function(v){return v.plan[s].ref}).filter(function(x,j,a){return a.indexOf(x)===j}),common=refs.length===1?refs[0]:'',init=need.length?'':common;
+    rows.push({s:s,need:need,have:have,items:await serviceItems(s),common:common,init:init,pick:init,amt:''})}
+  // nothing changes unless you pick: the service the others already use fills the missing ones, any other service goes on every video
+  function targets(r){if(!r.pick||r.pick===r.init)return [];return r.pick===r.common||!r.have.length?r.need:list}
   function qtyFor(v,r){var g=+((v.goals||{})[r.s]||0);return g||qnum(r.amt)}
-  function rowCost(r){var it=r.items.find(function(x){return x.id===r.pick});if(!it)return {n:0,c:0};var n=0,c=0;r.need.forEach(function(v){var q=qtyFor(v,r);if(q>0){n++;c+=it.price*q/1000}});return {n:n,c:c}}
+  function rowCost(r){var it=r.items.find(function(x){return x.id===r.pick});if(!it)return {n:0,c:0};var n=0,c=0;targets(r).forEach(function(v){var q=qtyFor(v,r);if(q>0){n++;c+=it.price*q/1000}});return {n:n,c:c}}
   function paint(){
     var tot=0,vids={};
-    document.getElementById('oel').innerHTML=rows.map(function(r,i){var rc=rowCost(r);tot+=rc.c;if(rc.n)r.need.forEach(function(v){if(qtyFor(v,r)>0)vids[v.id]=1});
-      var noGoal=r.need.filter(function(v){return !((v.goals||{})[r.s])}).length;
-      return '<div class="oer"><div class="oeh"><b>'+esc(STAT_NAME[r.s])+'</b><small>'+r.need.length+' video'+(r.need.length===1?'':'s')+' missing it</small></div>'+
-        (r.items.length?'<select data-oe="'+i+'"><option value="">Skip '+esc(STAT_NAME[r.s].toLowerCase())+'</option>'+r.items.map(function(it){return '<option value="'+esc(it.id)+'"'+(it.id===r.pick?' selected':'')+'>'+esc(it.name)+(it.site?' · '+esc(it.site):'')+' — '+usd2(it.price)+' / 1K</option>'}).join('')+'</select>'+
+    document.getElementById('oel').innerHTML=rows.map(function(r,i){var rc=rowCost(r);tot+=rc.c;if(rc.n)targets(r).forEach(function(v){if(qtyFor(v,r)>0)vids[v.id]=1});
+      var noGoal=targets(r).filter(function(v){return !((v.goals||{})[r.s])}).length,set=!r.need.length&&r.have.length;
+      return '<div class="oer"><div class="oeh"><b>'+esc(STAT_NAME[r.s])+'</b><small class="'+(set?'oset':'')+'">'+(set?'\u2713 Set, tap to change':r.have.length?r.need.length+' of '+list.length+' videos missing it':r.need.length+' video'+(r.need.length===1?'':'s')+' missing it')+'</small></div>'+
+        (r.items.length?'<select data-oe="'+i+'"><option value="">'+(r.have.length?'Keep as is':'Skip '+esc(STAT_NAME[r.s].toLowerCase()))+'</option>'+(r.have.length>1&&!r.common?'<option value="" disabled>Videos use different services</option>':'')+r.items.map(function(it){var b=it.key&&BAL[it.key]?BAL[it.key].r:null;return '<option value="'+esc(it.id)+'"'+(it.id===r.pick?' selected':'')+'>'+esc(it.name)+(it.site?' · '+esc(it.site):'')+(b?' ('+esc(balTxt(b))+')':'')+' — '+usd2(it.price)+' / 1K</option>'}).join('')+'</select>'+
         (r.pick&&noGoal?'<input type="text" inputmode="numeric" data-oa="'+i+'" value="'+esc(r.amt)+'" placeholder="How many for the '+noGoal+' without a goal">':'')+
-        (r.pick?'<div class="oec">'+(rc.n?'Adds to '+rc.n+' video'+(rc.n===1?'':'s')+' · <b>'+usd2(rc.c)+'</b>':'Type how many to add it')+'</div>':''):'<div class="pk-none" style="padding:4px 0">No '+esc(STAT_NAME[r.s].toLowerCase())+' services yet.</div>')+'</div>'}).join('');
-    var n=Object.keys(vids).length;
-    document.getElementById('oet').innerHTML='<span>New services total</span><b>'+usd2(tot)+'</b>';
-    var ok=document.getElementById('ok');ok.disabled=!n;ok.style.opacity=n?'':'.45';ok.textContent=n?'Add to '+n+' video'+(n===1?'':'s'):'Pick a service first';
+        (r.pick&&targets(r).length?'<div class="oec">'+(rc.n?(targets(r).length===list.length&&r.have.length?'Switches ':'Adds to ')+rc.n+' video'+(rc.n===1?'':'s')+' · <b>'+usd2(rc.c)+'</b>':'Type how many to add it')+'</div>':''):'<div class="pk-none" style="padding:4px 0">No '+esc(STAT_NAME[r.s].toLowerCase())+' services yet.</div>')+'</div>'}).join('');
+    var n=Object.keys(vids).length,any=rows.some(function(r){return r.have.length});
+    document.getElementById('oet').innerHTML='<span>Changes total</span><b>'+usd2(tot)+'</b>';
+    var ok=document.getElementById('ok'),on=n||any;ok.disabled=!on;ok.style.opacity=on?'':'.45';ok.textContent=n?'Save for '+n+' video'+(n===1?'':'s'):any?'Continue to total':'Pick a service first';
   }
-  openSheet('<h3>Order everything</h3><div class="pinfo">Pick one service for each. It’s added to every video this month that doesn’t have one yet, using each video’s own goal. Services a video already has stay as they are.</div><div class="oel" id="oel"></div><div class="pk-cost" id="oet"></div><button class="btn" id="ok">Pick a service first</button><button class="btn alt" id="x">Cancel</button>');
+  openSheet('<h3>Order everything</h3><div class="pinfo">Pick one service for each stat. A new pick fills the videos missing it. Changing a set one switches every video this month to it, using each video’s own goal.</div><div class="oel" id="oel"></div><div class="pk-cost" id="oet"></div><button class="btn" id="ok">Pick a service first</button><button class="btn alt" id="x">Cancel</button>');
   var box=document.getElementById('oel');
   box.addEventListener('change',function(e){var t=e.target;if(t.dataset.oe!=null){rows[+t.dataset.oe].pick=t.value;paint()}});
   box.addEventListener('input',function(e){var t=e.target;if(t.dataset.oa!=null){rows[+t.dataset.oa].amt=t.value;var pos=t.selectionStart;paint();var f=box.querySelector('[data-oa="'+t.dataset.oa+'"]');if(f){f.focus();try{f.setSelectionRange(pos,pos)}catch(_){}}}});
   document.getElementById('x').onclick=closeSheet;
+  if(canPanels()){var bk=[];rows.forEach(function(r){r.items.forEach(function(it){if(it.key&&bk.indexOf(it.key)<0)bk.push(it.key)})});
+    Promise.all(bk.map(balFor)).then(function(){if(document.getElementById('oel'))paint()})}
   document.getElementById('ok').onclick=async function(){
-    var b=this;b.disabled=true;b.textContent='Adding...';
-    for(var i=0;i<rows.length;i++){var r=rows[i],it=r.items.find(function(x){return x.id===r.pick});if(!it)continue;
-      for(var j=0;j<r.need.length;j++){var v=r.need[j],q=qtyFor(v,r);if(q>0)await otApi.setStat(v,r.s,{qty:q,plan:{ref:it.id,name:it.name,price:it.price}})}}
+    var b=this;b.disabled=true;b.textContent='Saving...';
+    for(var i=0;i<rows.length;i++){var r=rows[i],it=r.items.find(function(x){return x.id===r.pick});if(!it)continue;var tg=targets(r);
+      for(var j=0;j<tg.length;j++){var v=tg[j],q=qtyFor(v,r);if(q>0)await otApi.setStat(v,r.s,{qty:q,plan:{ref:it.id,name:it.name,price:it.price}})}}
     orderSheet(list,false);
   };
   paint();
