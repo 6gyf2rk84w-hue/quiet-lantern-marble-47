@@ -122,6 +122,10 @@
       return `<button class="ot-sg" type="button" data-ot-sug="${esc(o.id)}|${g.goal}">🎯 Suggested<b>${fmt(g.goal)}</b><small>Tap to use</small></button>`; }
     const statValue = (o, s) => { const p = planOf(o, s); if (p && goal(o, s)) return (+p.price || 0) * goal(o, s) / 1000; return prices ? (+prices[s] || 0) * (goal(o, s) || real(o, s)) : 0; };
     const value = o => STATS.reduce((t, [s]) => t + statValue(o, s), 0);
+    // what still needs ordering: a goal above what's been ordered so far (o.ordered[stat], set when an order goes out)
+    const ordered = (o, s) => +((o.ordered || {})[s]) || 0;
+    const needs = o => STATS.filter(([s]) => goal(o, s) > ordered(o, s)).map(([s]) => s);
+    const showOrder = o => !RO && opt.onOrder && (!STATS.some(([s]) => goal(o, s)) || needs(o).length > 0);
     const RO = !!opt.readOnly;
 
     // new numbers came in → remember when each stat last moved
@@ -165,29 +169,29 @@
       const S = state(o, s, now); if (S === "none" || S === "g") return "";
       const p = planOf(o, s);
       return `<div class="ot-stc s-${S}"${RO ? "" : ` data-ot-pick="${esc(o.id)}|${s}"`}><span class="ic">${icon(s) || ic}</span><div class="bd">
-        <div class="n"><b>${fmt(real(o, s))} / ${fmt(goal(o, s))}</b><small>${label}</small>${p ? `<em class="ot-plan">${esc(planText(p))} · ${usd(statValue(o, s))}</em>` : ""}</div>${barRow(o, s, label, S)}</div></div>`;
+        <div class="n"><b>${fmt(real(o, s))} / ${fmt(goal(o, s))}</b><small class="ot-sr">${label}</small></div>${barRow(o, s, label, S)}${p ? `<em class="ot-plan">${esc(planText(p))} · ${usd(statValue(o, s))}</em>` : ""}</div></div>`;
     }
     function card(o, n, now) {
-      const ed = st.edit === o.id, vg = goal(o, "views"), vS = state(o, "views", now);
+      const ed = st.edit === o.id, vg = goal(o, "views"), vS = state(o, "views", now), usdV = value(o);
       const head = `<div class="ot-hd"><div class="ot-name"><small class="ot-num">${esc(L.order[0].toUpperCase() + L.order.slice(1))} ${n}${!st.who && opt.byLabel && opt.byLabel(o) ? ` <span class="ot-by">${esc(opt.byLabel(o))}</span>` : ""}${o.auto ? ` <span class="ot-by ot-auto">⚡ auto-logged</span>` : ""}</small>${o.title ? `<span class="ot-ttl">${esc(o.title)}</span>` : ""}</div>
-        ${RO ? "" : `<button class="ot-edbtn" type="button" data-ot-edit="${esc(o.id)}">${ed ? "Done" : "✏️ Edit"}</button>`}</div>`;
+        <div class="ot-hdr">${!ed && usdV ? `<b class="ot-tot">${usd(usdV)}</b>` : ""}${RO ? "" : `<button class="ot-edbtn" type="button" data-ot-edit="${esc(o.id)}">${ed ? "Done" : "✏️ Edit"}</button>`}</div></div>`;
       if (ed) return `<div class="ot-card">${head}
         <div class="ot-egrid" style="grid-template-columns:1fr"><label>Title<input class="ot-in" data-ot-f="title" value="${esc(o.title)}"></label>
         <label>Post link<input class="ot-in" data-ot-f="link" inputmode="url" value="${esc(o.link)}"></label></div>
         <div class="ot-egrid">${STATS.map(([s, lb]) => `<label>${lb} goal<input class="ot-in" inputmode="decimal" data-ot-g="${s}" value="${goal(o, s) ? num(goal(o, s)) : ""}" placeholder="—"></label>`).join("")}</div>
         <div class="ot-row"><button class="ot-btn" type="button" data-ot-save="${esc(o.id)}">Save</button><button class="ot-btn danger" type="button" data-ot-del="${esc(o.id)}">Delete ${esc(L.order)}</button></div></div>`;
       const done = STATS.filter(([s]) => goal(o, s) && s !== "views" && state(o, s, now) === "g");
-      const usdV = value(o);
+      const thumb = o.link ? `<a class="ot-thumb" href="${esc(o.link)}" target="_blank" rel="noopener" style="${o.thumb ? `background-image:url('${esc(o.thumb)}')` : ""}" aria-label="Open the post"></a>` : `<span class="ot-thumb"></span>`;
       return `<div class="ot-card">${head}
+        <div class="ot-main">${thumb}<div class="ot-info">
         <div class="ot-views"${RO ? "" : ` data-ot-pick="${esc(o.id)}|views"`}>${num(real(o, "views"))}<span class="g"> / ${vg ? fmt(vg) : "---"}</span><small>views</small>${vS === "g" ? `<span class="ot-chk">✓</span>` : ""}${planOf(o, "views") ? `<em class="ot-plan">${esc(planText(planOf(o, "views")))} · ${usd(statValue(o, "views"))}</em>` : ""}</div>
         ${vg && vS !== "g" ? barRow(o, "views", "Views", vS) : ""}
         ${sugTag(o)}
-        <div class="ot-mid">${o.link ? `<a class="ot-thumb" href="${esc(o.link)}" target="_blank" rel="noopener" style="${o.thumb ? `background-image:url('${esc(o.thumb)}')` : ""}" aria-label="Open the post"></a>` : `<span class="ot-thumb"></span>`}
-          ${!RO && opt.onOrder ? `<button class="ot-side ot-order" type="button" data-ot-order="${esc(o.id)}">🛒<span>Place order</span></button>` : `<span class="ot-side"></span>`}</div>
+        ${showOrder(o) ? `<button class="ot-po" type="button" data-ot-order="${esc(o.id)}"><svg class="ot-cart" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 3.5h2.6l2.3 11.2a1.6 1.6 0 0 0 1.6 1.3h8.4a1.6 1.6 0 0 0 1.6-1.2l1.6-6.8H6.2"/><circle cx="9.6" cy="20" r="1.5"/><circle cx="17.2" cy="20" r="1.5"/><path d="M12.6 7.2v4.6M10.3 9.5h4.6"/></svg><span>Place order</span></button>` : ""}</div></div>
         <div class="ot-stats">${STATS.slice(1).map(([s, lb, ic]) => statCard(o, s, lb, ic, now)).join("")}</div>
         ${!RO && opt.onPick && STATS.some(([s]) => !goal(o, s)) ? `<div class="ot-adds">${STATS.filter(([s]) => !goal(o, s)).map(([s, lb, ic]) => `<button class="ot-add" type="button" data-ot-pick="${esc(o.id)}|${s}">+ ${icon(s, 18) || ic} ${lb}</button>`).join("")}</div>` : ""}
         ${done.length ? `<div class="ot-done">Done ${done.map(([s, lb, ic]) => { const [c, sy] = mark(o, s); return `<span class="ot-chip mk-${c}" title="${lb}">${sy} ${icon(s, 18) || ic}</span>`; }).join("")}</div>` : ""}
-        ${usdV ? `<div class="ot-usd">${usd(usdV)}</div>` : ""}</div>`;
+</div>`;
     }
     const cash = v => "$" + (Math.round(v * 100) / 100).toLocaleString("en-US", { maximumFractionDigits: 2 });
     const showDeal = () => !RO && opt.deal && (!st.who || st.who === opt.me);
@@ -305,7 +309,7 @@
       try { const o = await store.load(); if (Array.isArray(o)) { st.orders = o; draw(); } } catch (e) {} }
     const monthsInfo = () => allMonths().slice().reverse().map(m => { const a = vis().filter(o => o.month === m);
       return { m, name: monthName(m), archived: isArch(m), count: a.length, views: a.reduce((t, o) => t + real(o, "views"), 0) }; });
-    return { refresh: () => refresh(false), reload, redraw: () => draw(), setStat, months: monthsInfo,
+    return { refresh: () => refresh(false), reload, redraw: () => draw(), setStat, months: monthsInfo, needs,
       setMonth(m) { st.month = m; st.picked = true; st.open = null; st.edit = null; draw(); window.scrollTo(0, 0); },
       resetMonth() { st.picked = false; st.open = null; draw(); }, get month() { return st.month; }, destroy() { clearInterval(tick); clearInterval(redraw); root.innerHTML = ""; root.classList.remove("ot"); }, get orders() { return st.orders; } };
   }

@@ -232,3 +232,32 @@ span.ot-side{visibility:hidden}
 /* the whole thumbnail, uncropped, at its own shape; Place order beside it */
 .ot .ot-mid{grid-template-columns:auto 1fr}
 .ot .ot-thumb{height:200px;width:auto;aspect-ratio:9/16;background-size:contain;background-color:#101C25}
+/* card v3: thumbnail left, views + Place order right, total by Edit, slim stat rows */
+.ot .ot-hdr{display:flex;align-items:center;gap:10px;flex:none}
+.ot .ot-tot{font:800 21px/1 var(--ot-display);letter-spacing:-.01em;color:var(--ot-green);font-variant-numeric:tabular-nums}
+.ot .ot-main{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center}
+.ot .ot-main .ot-thumb{width:118px;height:auto;aspect-ratio:3/4;background-size:cover;background-color:#101C25;border-radius:14px}
+.ot .ot-info{display:flex;flex-direction:column;gap:8px;min-width:0}
+.ot .ot-info .ot-views{font-size:23px}
+.ot .ot-info .ot-views small{font-size:14px}
+.ot .ot-info .ot-views .ot-plan{display:block;margin:5px 0 0;font-size:13px;white-space:normal}
+.ot .ot-info .ot-sg{align-self:flex-start}
+.ot .ot-po{position:relative;overflow:hidden;align-self:center;width:88%;height:44px;display:flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:999px;padding:0 16px;
+  background:linear-gradient(120deg,#6A2CFF,#9B4DFF 55%,#D27BFF);color:#fff;font:900 15.5px/1 var(--ot-font);letter-spacing:.01em;
+  box-shadow:0 6px 20px rgba(150,80,255,.5),inset 0 1px 0 rgba(255,255,255,.45);text-shadow:0 1px 2px rgba(40,0,90,.35);transition:transform .15s}
+.ot .ot-po::after{content:"";position:absolute;top:0;bottom:0;left:-40%;width:28%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);transform:skewX(-20deg);animation:otShine 4.5s ease-in-out infinite}
+.ot .ot-po:active{transform:scale(.94)}
+.ot .ot-cart{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round}
+.ot .ot-cart circle{fill:currentColor;stroke:none}
+@keyframes otShine{0%,55%{left:-40%}85%,100%{left:120%}}
+@media (prefers-reduced-motion:reduce){.ot .ot-po::after{animation:none;left:16%}}
+.ot .ot-stats{gap:6px}
+.ot .ot-stc{padding:7px 12px;gap:10px}
+.ot .ot-stc .ic{width:24px}
+.ot .ot-stc .ic svg{width:22px;height:22px}
+.ot .ot-stc .bd{flex-direction:row;flex-wrap:wrap;align-items:center;gap:4px 10px}
+.ot .ot-stc .n{flex:none;min-width:80px}
+.ot .ot-stc .n b{font-size:16px}
+.ot .ot-stc .ot-bar-r{flex:1;min-width:120px}
+.ot .ot-stc .ot-plan{flex-basis:100%;max-width:none;margin:0;font-size:12px}
+.ot .ot-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}

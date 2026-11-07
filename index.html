@@ -1184,7 +1184,8 @@ function igReturn(){
 
 /* ---------- Place order / Order all (paying unlocks once panels are connected) ---------- */
 function planned(v){
-  var out=[];STAT_ORDER.forEach(function(s){var p=(v.plan||{})[s],q=+((v.goals||{})[s]||0);if(p&&q)out.push({s:s,name:planLabel(p)||p.name||'',svc:p.name||'',qty:q,cost:(+p.price||0)*q/1000})});
+  // only what's still needed: the goal minus what's already been ordered (a raised goal orders just the extra)
+  var out=[];STAT_ORDER.forEach(function(s){var p=(v.plan||{})[s],q=(+((v.goals||{})[s]||0))-(+((v.ordered||{})[s]||0));if(p&&q>0)out.push({s:s,name:planLabel(p)||p.name||'',svc:p.name||'',qty:q,cost:(+p.price||0)*q/1000})});
   return out;
 }
 function orderSheet(list,single){
