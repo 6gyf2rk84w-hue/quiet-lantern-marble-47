@@ -1,7 +1,6 @@
 // "panel" function: talks to the order panels for the app.
 // Each person connects their own panel key; keys are kept in a private table
 // that only this function can read, so a key never goes back to anyone's phone.
-// The owner can also keep a key in Supabase secrets named <SITE ID>_KEY (for example ABC_KEY).
 //
 // Actions (POST JSON):
 //   catalog                         -> panels people can connect (name + sign-up / key page links)
@@ -98,7 +97,6 @@ Deno.serve(async (req: Request) => {
       return json({ sites: sites.map((s) => ({ id: s.id, name: s.name, signup_url: s.signup_url, key_url: s.key_url })) });
     }
 
-    const ownerKey = (s: Site) => (role === "owner" ? (Deno.env.get(`${s.id.toUpperCase().replace(/[^A-Z0-9]/g, "_")}_KEY`) || "") : "");
     const myKeys = async () => {
       const { data } = await admin.from("panel_keys").select("site_id,api_key").eq("user_id", uid);
       const m = new Map<string, string>();
@@ -108,10 +106,10 @@ Deno.serve(async (req: Request) => {
 
     if (action === "list") {
       const keys = await myKeys();
-      const mine = sites.filter((s) => keys.has(s.id) || ownerKey(s));
+      const mine = sites.filter((s) => keys.has(s.id));
       const out = await Promise.all(mine.map(async (s) => {
-        const saved = keys.has(s.id);
-        const r = await callPanel(s, saved ? keys.get(s.id)! : ownerKey(s), { action: "balance" });
+        const saved = true;
+        const r = await callPanel(s, keys.get(s.id)!, { action: "balance" });
         return {
           id: s.id, name: s.name, key_url: s.key_url, saved,
           balance: r.error ? null : r.data?.balance ?? null,
@@ -146,8 +144,8 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true });
     }
 
-    // Everything else uses the caller's own key (the owner can fall back to the Supabase secret)
-    const key = (await myKeys()).get(site.id) || ownerKey(site);
+    // Everything else uses the caller's own key
+    const key = (await myKeys()).get(site.id);
     if (!key) return json({ error: `Connect ${site.name} in Connections first.` }, 400);
 
     if (action === "balance") {

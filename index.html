@@ -1194,13 +1194,13 @@ function openIgSettings(){
 /* ---------- Panels in Connections: each person connects their own panel keys ---------- */
 var PCAT=null;
 async function panelCatalog(){if(PCAT)return PCAT;var r=await panelCall('',{action:'catalog'});if(!r.error&&r.sites)PCAT=r.sites;return r.error?{error:r.error}:(r.sites||[])}
-function panelBal(p){return p.error?'<span class="stx bad">'+esc(p.error)+'</span>':(p.balance==null?'<span class="stx ok">Connected</span>':'<span class="stx">Balance '+esc(money(p.balance))+(p.currency&&p.currency!=='USD'?' '+esc(p.currency):'')+'</span>')}
+function panelBal(p){return p.error?'<span class="stx bad">'+esc(p.error)+'</span>':(p.balance==null?'<span class="stx ok">Connected</span>':'<span class="stx ok">Balance '+esc(money(p.balance))+(p.currency&&p.currency!=='USD'?' '+esc(p.currency):'')+'</span>')}
 async function paintPanels(){
   var r=await panelCall('',{action:'list'}),el=document.getElementById('cpans');if(!el)return;
   if(r.error){el.innerHTML='<div class="srow"><div><span class="stx bad">'+esc(r.error)+'</span></div></div>';return}
   var ps=r.panels||[];
   if(!ps.length){el.innerHTML='<div class="srow"><div><b>No panels yet</b><span class="stx">Tap Add a panel to connect your first one.</span></div></div>';return}
-  el.innerHTML=ps.map(function(p){return '<div class="srow crow"><span class="cdot'+(p.error?' bad':'')+'"></span><div><b class="'+(p.error?'':'cok')+'">'+esc(p.name)+'</b>'+panelBal(p)+'</div>'+(p.saved?'<button class="xdis" data-pdis="'+esc(p.id)+'" data-pname="'+esc(p.name)+'">Disconnect</button>':'<span class="ctag">Owner key</span>')+'</div>'}).join('');
+  el.innerHTML=ps.map(function(p){return '<div class="srow crow"><span class="cdot'+(p.error?' bad':'')+'"></span><div><b class="'+(p.error?'':'cok')+'">'+esc(p.name)+'</b>'+panelBal(p)+'</div>'+'<button class="xdis" data-pdis="'+esc(p.id)+'" data-pname="'+esc(p.name)+'">Disconnect</button>'+'</div>'}).join('');
   el.querySelectorAll('[data-pdis]').forEach(function(b){b.onclick=function(){var id=b.dataset.pdis,nm=b.dataset.pname;
     openSheet('<h3>Are you sure?</h3><p style="color:var(--mute);margin:0 0 14px">Are you sure you want to disconnect '+esc(nm)+'? You can connect it again any time with a new key.</p><button class="btn dangerbtn" id="yes">Yes, disconnect</button><button class="btn alt" id="x">Cancel</button>');
     document.getElementById('x').onclick=openIgSettings;
