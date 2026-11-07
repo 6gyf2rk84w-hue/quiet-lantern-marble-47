@@ -434,6 +434,7 @@ async function start(u){
     else seedDefaults();
     save();await q;
   }
+  if(canVideos())startTracking();
   render();
 }
 async function boot(){
@@ -455,7 +456,7 @@ var TABS=[['working','Working'],['processing','Testing'],['partial','Partial'],[
 function inSite(){var c=cur();return !!c&&!!node(c)&&node(c).parent!==null}
 var STS=[['processing','Testing','var(--wait)'],['working','Working','var(--ok)'],['partial','Partial','var(--part)'],['failed','Failed','var(--bad)']];
 function ordHtml(o){
-  return '<div class="ord" data-oid="'+o.id+'" data-grp="'+o.status+'"><div class="top">'+(gripOrders?'<span class="grip" aria-label="Drag to reorder">\u22ee\u22ee</span>':'')+'<div style="flex:1;min-width:0">'+(o.svc?'<span class="svc">'+esc(o.svc)+'</span>':'')+'<div class="t">'+esc(o.title)+'</div><div class="price">'+esc(o.price)+' per 1,000</div>'+(editing&&!isViewer?'<button class="idbtn" data-editid="'+o.id+'">\u270e Edit details</button>':'')+'</div>'
+  return '<div class="ord" data-oid="'+o.id+'" data-grp="'+o.status+'"><div class="top">'+(gripOrders?'<span class="grip" aria-label="Drag to reorder">\u22ee\u22ee</span>':'')+'<div style="flex:1;min-width:0">'+(o.svc?'<span class="svc">'+esc(o.svc)+'</span>':'')+'<div class="t">'+esc(o.title)+'</div>'+(o.svc?'<div class="price">'+(LIVE[o.id]&&LIVE[o.id].error?'<span class="ntag">'+esc(liveErr(LIVE[o.id].error))+'</span>':(LIVE[o.id]?'':'\u2026 ')+'$'+esc(o.price)+' per 1,000'+(o.prevPrice&&o.priceChangedAt&&Date.now()-o.priceChangedAt<864e5?' <span class="pchg">was $'+esc(o.prevPrice)+'</span>':''))+'</div>':'<div class="price"><span class="ntag">Needs Service ID \u00b7 add it to show the live price</span></div>')+(editing&&!isViewer?'<button class="idbtn" data-editid="'+o.id+'">\u270e Edit details</button>':'')+'</div>'
   +'<div>'+(editing?'<button class="xdel" data-delord="'+o.id+'" aria-label="Delete">\u2715</button>':'')+'</div></div>'
   +ownerActs(o)+apvHtml(o)
   +'<div class="seg">'+STS.map(function(s){return '<button class="'+s[0]+(o.status===s[0]?' on':'')+'"'+(isViewer?' disabled':' data-st="'+s[0]+'" data-o="'+o.id+'"')+'>'+s[1]+'</button>'}).join('')+'</div></div>';
@@ -481,6 +482,7 @@ function render(){
     if(ks.length){ks.forEach(function(k){var n=kids(k.id).length,m=S.orders.filter(function(o){return o.node===k.id}).length,sub=k.parent===null?(n+(n===1?' site':' sites')):'';
       h+='<div class="sec" data-open="'+k.id+'">'+(editing&&isAdmin&&k.parent!==null?'<span class="grip" aria-label="Drag to reorder">\u22ee\u22ee</span>':'')+'<div class="ico'+(k.img?'':' l')+(k.parent===null&&isAdmin&&editing?' ed':'')+'"'+(k.parent===null&&isAdmin&&editing?' data-icon="'+k.id+'"':'')+'>'+(k.img?'<img src="'+k.img+'" alt="">':esc(k.title.charAt(0).toUpperCase()))+'</div><div class="i"><div class="t">'+esc(k.title)+'</div>'+(sub?'<div class="s">'+sub+'</div>':'')+'</div>'+(editing&&isAdmin?'<button class="xdel" data-delnode="'+k.id+'" aria-label="Delete">\u2715</button>':'')+'<span class="chev">\u203a</span></div>'})}
     h+=os.filter(function(o){return o.status===tab}).map(ordHtml).join('');
+    if(site){var rf=os.filter(function(o){return o.svc}).map(function(o){return o.id}),lk='site:'+c;if(rf.length&&Date.now()-(LIVE_T[lk]||0)>60000){LIVE_T[lk]=Date.now();liveFor(rf).then(function(){if(scr==='panels'&&cur()===c)render()})}}
   }else{
     var list=S.orders.filter(function(o){return o.status===tab});
     if(!list.length)h+='<div class="empty"><b>\u{1F4ED}</b>No orders here yet.</div>';
@@ -818,6 +820,54 @@ var STAT_NAME={views:'Views',likes:'Likes',shares:'Shares',saves:'Saves',reposts
 var PT=[['working','Working'],['partial','Partial'],['failed','Failed'],['processing','Testing']];
 function ppk(p){var v=parseFloat(String(p==null?'':p).replace(/[^0-9.]/g,''));return isFinite(v)?v:0}
 function usd2(v){return '$'+(Math.round(v*100)/100).toFixed(2)}
+
+/* ---------- Live prices and track records (from the panels, by Service ID) ---------- */
+var LIVE={},SST={},LIVE_T={},SST_T={};
+async function liveFor(refs){
+  refs=refs.filter(function(r,i,a){return r&&a.indexOf(r)===i});
+  var need=refs.filter(function(r){return !LIVE[r]||Date.now()-(LIVE_T[r]||0)>60000});
+  var need2=refs.filter(function(r){return !SST[r]||Date.now()-(SST_T[r]||0)>60000});
+  var jobs=[];
+  if(need.length)jobs.push(panelCall('',{action:'prices',refs:need}).then(function(r){var p=(r&&r.prices)||{};need.forEach(function(x){LIVE[x]=p[x]||{error:r&&r.error?'unreachable':'missing'};LIVE_T[x]=Date.now()})}));
+  if(need2.length)jobs.push(panelCall('',{action:'stats',refs:need2}).then(function(r){var p=(r&&r.stats)||{};need2.forEach(function(x){if(p[x]){SST[x]=p[x];SST_T[x]=Date.now()}})}));
+  await Promise.all(jobs);
+  if(canPanels())syncLivePrices(refs);
+}
+// owner and mods: the Panels screen keeps the panel's real price (typed prices don't count)
+function syncLivePrices(refs){var ch=false;refs.forEach(function(r){var l=LIVE[r],o=S.orders.find(function(x){return x.id===r});if(!o||!l||l.rate==null||!isFinite(l.rate))return;
+  var cur=ppk(o.price);if(Math.abs(cur-l.rate)>0.0000001){o.prevPrice=o.price;o.price=String(+l.rate.toFixed(6));o.priceChangedAt=Date.now();ch=true}});
+  if(ch){try{save()}catch(e){}if(scr==='panels')render()}}
+function liveErr(code){return {needs_id:'Needs Service ID',not_connected:'Panel not connected',not_found:'Service ID not found on the panel',no_panel:'Panel not in the list',unreachable:'Panel not answering',missing:'Service removed'}[code]||'Price unavailable'}
+function rateCls(p){return p>=90?'pg':'py'}
+function recordHtml(ref){var s=SST[ref];if(!s)return '<span class="rn">Checking…</span>';if(!s.n||s.rate==null)return '<span class="rn">New · no orders yet</span>';
+  return '<span class="pill '+rateCls(s.rate)+'">'+s.rate+'%</span><span class="rn">'+s.n+' order'+(s.n===1?'':'s')+'</span>'}
+// one service row, used anywhere a service is picked
+function svcRowHtml(o,on,full,attr){var l=LIVE[o.id],bad=l&&l.error,price=bad?'—':l?usd2(l.rate):'…';
+  var sub=full?'<small>'+esc(o.site||'')+(o.ok?' · ✓ Approved':'')+(o.key&&BAL[o.key]?' · <span class="'+(BAL[o.key].r.error?'bbad':'bok')+'">'+esc(balTxt(BAL[o.key].r))+'</span>':'')+'</small>':'';
+  return '<div class="pk-row svr'+(on?' on':'')+(bad?' dis':'')+'" '+attr+'><span class="svm"><b>'+esc(o.name)+'</b>'+sub+'<span class="svrec">'+(bad?'<span class="ntag">'+esc(liveErr(l.error))+(l.error==='needs_id'?' · add it to show the live price':'')+'</span>':recordHtml(o.id))+'</span></span>'
+    +'<span class="svp"><span class="pp">'+price+' <i>/ 1K</i></span><button type="button" class="vdl" data-vd="'+esc(o.id)+'">View data ›</button></span></div>'}
+function livePrice(ref){var l=LIVE[ref];return l&&!l.error&&isFinite(l.rate)?+l.rate:null}
+function fmtDur(s){if(s==null)return '—';if(s<3600)return '~'+Math.max(1,Math.round(s/60))+' min';if(s<86400)return '~'+Math.round(s/3600)+' hr'+(Math.round(s/3600)===1?'':'s');return '~'+Math.round(s/86400)+' day'+(Math.round(s/86400)===1?'':'s')}
+// the live data page opens on top of whatever is showing, and closes back to it
+function openData(ref,name){
+  var s=SST[ref]||{n:0},d=document.getElementById('dpage');
+  if(!d){d=document.createElement('div');d.id='dpage';document.body.appendChild(d)}
+  var tot=(s.completed||0)+(s.partial||0)+(s.canceled||0),C=2*Math.PI*15.9,seg=function(n,off,col){var L=tot?C*n/tot:0;return L?'<circle cx="21" cy="21" r="15.9" fill="none" stroke="'+col+'" stroke-width="5.5" stroke-dasharray="'+L+' '+(C-L)+'" stroke-dashoffset="'+(-off)+'" transform="rotate(-90 21 21)"/>':''};
+  var c1=tot?C*(s.completed||0)/tot:0,c2=tot?C*(s.partial||0)/tot:0;
+  d.innerHTML='<div class="dp"><div class="dph"><div><h3>'+esc(name||'Service')+'</h3><p>Live data · from orders placed in this app</p></div><button class="dpx" id="dpx" aria-label="Close">✕</button></div>'
+    +(tot?'<div class="dpbig"><div class="dpp '+rateCls(s.rate)+'">'+s.rate+'%</div><svg viewBox="0 0 42 42" class="dpd"><circle cx="21" cy="21" r="15.9" fill="none" stroke="#1C2540" stroke-width="5.5"/>'+seg(s.completed||0,0,'#34D399')+seg(s.partial||0,c1,'#F5A524')+seg(s.canceled||0,c1+c2,'#F43F5E')+'</svg></div>'
+      +'<div class="dpl"><span><i style="background:#34D399"></i>Completed</span><b>'+(s.completed||0)+'</b></div><div class="dpl"><span><i style="background:#F5A524"></i>Partial</span><b>'+(s.partial||0)+'</b></div><div class="dpl"><span><i style="background:#F43F5E"></i>Canceled</span><b>'+(s.canceled||0)+'</b></div>'
+      +'<div class="dp2"><div><small>Finishes in</small><b>'+fmtDur(s.finish_s)+'</b></div><div><small>Based on</small><b>'+tot+' order'+(tot===1?'':'s')+'</b></div></div>'
+     :'<div class="dpbig"><div class="dpp" style="color:var(--ob-steel)">New</div><p class="pinfo" style="text-align:center">No finished orders yet. Numbers show up here as orders through the app complete, partial out or get canceled.</p></div>')+'</div>';
+  d.classList.add('on');
+  d.onclick=function(e){if(e.target===d||e.target.closest('#dpx'))d.classList.remove('on')};
+}
+document.addEventListener('click',function(e){var b=e.target.closest('[data-vd]');if(!b)return;e.preventDefault();e.stopPropagation();var row=b.closest('.svr');openData(b.dataset.vd,row?(row.querySelector('b')||{}).textContent:'')},true);
+// order tracking: check unfinished orders with the panels when the app opens, then every few minutes
+var trackT=null;
+async function trackOrders(){if(!canVideos()||document.visibilityState!=='visible')return;var r=await panelCall('',{action:'track'});if(r&&r.changed){SST={};SST_T={}}}
+function startTracking(){if(trackT)return;trackOrders();trackT=setInterval(trackOrders,180000);document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')trackOrders()})}
+
 function qnum(v){return Math.round(parseFloat(String(v).replace(/[^0-9.]/g,''))||0)}
 async function pickService(v,stat,done,step){
   var nm=STAT_NAME[stat]||stat,had=!!((v.goals||{})[stat]),plan=(v.plan||{})[stat]||null;
@@ -840,24 +890,26 @@ async function pickService(v,stat,done,step){
   function item(){return sel?items.find(function(i){return i.id===sel}):null}
   function list(){
     if(note)return '<div class="pk-none">'+note+'</div>';
-    return items.map(function(o){return '<button class="pk-row'+(o.id===sel?' on':'')+'" data-pk="'+esc(o.id)+'"><span style="min-width:0"><b>'+esc(o.name)+'</b>'+(full?'<small>'+esc(o.site)+(o.ok?' · ✓ Approved':'')+(o.key&&BAL[o.key]?' · <span class="'+(BAL[o.key].r.error?'bbad':'bok')+'">'+esc(balTxt(BAL[o.key].r))+'</span>':'')+'</small>':'')+'</span><span class="pp">'+usd2(o.price)+' / 1K</span></button>'}).join('');
+    return items.map(function(o){return svcRowHtml(o,o.id===sel,full,'data-pk="'+esc(o.id)+'" role="button" tabindex="0"')}).join('');
   }
-  function cost(){var q=qnum(document.getElementById('pkq').value),o=item();
-    document.getElementById('pkc').innerHTML='<span>Total</span><b>'+usd2(o?o.price*q/1000:0)+'</b>';
-    var ok=document.getElementById('ok'),on=!!o&&q>0;ok.disabled=!on;ok.style.opacity=on?'':'.45'}
+  function cost(){var q=qnum(document.getElementById('pkq').value),o=item(),lp=o?livePrice(o.id):null;
+    document.getElementById('pkc').innerHTML='<span>Total</span><b>'+usd2(lp!=null?lp*q/1000:0)+'</b>';
+    var ok=document.getElementById('ok'),on=lp!=null&&q>0;ok.disabled=!on;ok.style.opacity=on?'':'.45'}
   function paint(){document.getElementById('pkl').innerHTML=list();cost()}
   var saveTxt=step?(step.i<step.n?'Save & next':'Save & finish'):'Save';
   openSheet(head+'<div class="pk-list" id="pkl"></div><label class="fl2" for="pkq">Amount wanted</label><input type="text" id="pkq" inputmode="numeric" placeholder="How many '+esc(nm.toLowerCase())+'?" value="'+(had?esc(v.goals[stat]):'')+'" autocomplete="off"><div class="pk-cost" id="pkc"></div><button class="btn" id="ok">'+saveTxt+'</button>'+(step?'<button class="btn alt" id="sk">Skip '+esc(nm.toLowerCase())+'</button>':(had?'<button class="btn alt" id="rm" style="color:var(--bad)">Remove '+esc(nm.toLowerCase())+'</button>':''))+'<button class="btn alt" id="x">'+(step?'Stop here':'Cancel')+'</button>');
   paint();
+  liveFor(items.map(function(i){return i.id})).then(function(){if(sel&&livePrice(sel)==null)sel=null;if(document.getElementById('pkl'))paint()});
   if(full){var keys=items.map(function(i){return i.key}).filter(function(k,i,a){return k&&a.indexOf(k)===i});
     Promise.all(keys.map(balFor)).then(function(){if(document.getElementById('pkl'))paint()})}
-  document.getElementById('pkl').onclick=function(e){var b=e.target.closest('[data-pk]');if(!b)return;sel=sel===b.dataset.pk?null:b.dataset.pk;paint()};
+  document.getElementById('pkl').onclick=function(e){var b=e.target.closest('[data-pk]');if(!b||b.classList.contains('dis'))return;if(livePrice(b.dataset.pk)==null)return;sel=sel===b.dataset.pk?null:b.dataset.pk;paint()};
   document.getElementById('pkq').oninput=cost;
   document.getElementById('ok').onclick=function(){
     var q=qnum(document.getElementById('pkq').value),o=item();
     if(!o){toast('Pick a service first');return}
     if(q<=0){toast('Type how many '+nm.toLowerCase()+' you want');return}
-    closeSheet();done({qty:q,plan:o?{ref:o.id,name:o.name,price:o.price}:null});
+    var lp=livePrice(o.id);if(lp==null){toast('This service has no live price yet');return}
+    closeSheet();done({qty:q,plan:o?{ref:o.id,name:o.name,price:lp}:null});
     if(step)step.next();
   };
   if(step)document.getElementById('sk').onclick=function(){step.next()};
@@ -1283,7 +1335,7 @@ function igReturn(){
 function committed(v,s){var real=+((v.real||{})[s]||0),ord=+((v.ordered||{})[s]||0);if(!ord)return real;var base=+((v.ordBase||{})[s]||0);return Math.max(real,base+ord)}
 function planned(v,only){
   // only what's still needed: the goal minus what's already there (a raised goal orders just the extra)
-  var out=[];STAT_ORDER.forEach(function(s){if(only&&only.indexOf(s)<0)return;var p=(v.plan||{})[s],q=(+((v.goals||{})[s]||0))-committed(v,s);if(p&&q>0)out.push({s:s,name:planLabel(p)||p.name||'',svc:p.name||'',qty:q,cost:(+p.price||0)*q/1000})});
+  var out=[];STAT_ORDER.forEach(function(s){if(only&&only.indexOf(s)<0)return;var p=(v.plan||{})[s],q=(+((v.goals||{})[s]||0))-committed(v,s);if(p&&q>0){var lp=livePrice(p.ref),pr=lp!=null?lp:(+p.price||0);out.push({s:s,name:planLabel(p)||p.name||'',svc:p.name||'',qty:q,price:pr,cost:pr*q/1000})}});
   return out;
 }
 function orderSheet(list,single,only){
@@ -1340,9 +1392,12 @@ function placeJobs(v){
     return {s:r.s,qty:r.qty,cost:r.cost,rec:rec,site:rec?siteOf(rec):'',service:rec?String(rec.svc||'').trim():'',siteName:rec&&node(rec.node)?node(rec.node).title:''}});
 }
 function poRow(s,qty,right,cls){return '<div class="osr one"><i class="oic">'+(window.OrderTracker&&OrderTracker.icon?OrderTracker.icon(s,20):'')+'</i><b>'+esc(STAT_NAME[s])+'</b><span class="oq">'+qty.toLocaleString('en-US')+'</span><em'+(cls?' class="'+cls+'"':'')+'>'+right+'</em></div>'}
-function confirmPlace(v){
+async function confirmPlace(v){
   if(placing||!isAdmin)return;
-  var e=document.getElementById('poerr'),jobs=placeJobs(v),bad=[];
+  var e=document.getElementById('poerr'),bad=[];
+  var pl=planned(v);LIVE_T={};await liveFor(pl.map(function(r){return ((v.plan||{})[r.s]||{}).ref}));
+  var jobs=placeJobs(v);
+  jobs.forEach(function(j){var l=j.rec?LIVE[j.rec.id]:null;if(j.rec&&/^\d+$/.test(j.service)&&l&&l.error)bad.push(STAT_NAME[j.s]+': '+liveErr(l.error)+'.')});
   if(!igLink(v.link)){e.textContent='This video needs its Instagram post or Reel link first (https://www.instagram.com/p/... or /reel/...).';return}
   jobs.forEach(function(j){if(!j.rec)bad.push(STAT_NAME[j.s]+': its service was removed from Panels. Pick another one.');else if(!/^\d+$/.test(j.service))bad.push(STAT_NAME[j.s]+': '+j.rec.title+' has no Service ID yet. Add it in Panels.')});
   if(bad.length){e.innerHTML=bad.map(esc).join('<br>');return}
@@ -1371,7 +1426,7 @@ function confirmPlace(v){
       // 3. place them one at a time; each success is saved right away, so it can't go out twice
       var out=[];
       for(var i=0;i<jobs.length;i++){var j=jobs[i];yes.textContent='Placing '+(i+1)+' of '+jobs.length+'…';
-        var r=await panelCall(j.site,{action:'add',service:j.service,link:String(v.link).trim(),quantity:String(j.qty)});
+        var r=await panelCall(j.site,{action:'add',service:j.service,link:String(v.link).trim(),quantity:String(j.qty),ref:j.rec.id,stat:j.s,video:v.id,cost:Math.round(j.cost*10000)/10000});
         if(r.error||!r.order){out.push({j:j,err:r.error||'No order number came back.'});continue}
         await otApi.markOrdered(v,j.s,j.qty,{order:String(r.order),site:j.site,svc:j.service,ref:j.rec.id,cost:Math.round(j.cost*10000)/10000});
         out.push({j:j,order:r.order});
@@ -1403,13 +1458,15 @@ async function orderEverything(list){
   for(var i=0;i<STAT_ORDER.length;i++){var s=STAT_ORDER[i],items=await serviceItems(s);rows.push({s:s,items:items,pick:'',amt:''})}
   // what each video still needs for this stat: its goal minus what it already has (live count plus orders on the way)
   function missing(v,r){var g=+((v.goals||{})[r.s]||0)||qnum(r.amt);return g>0?Math.max(0,g-committed(v,r.s)):0}
-  function rowCost(r){var it=r.items.find(function(x){return x.id===r.pick});if(!it)return {n:0,q:0,c:0};var n=0,q=0;list.forEach(function(v){var m=missing(v,r);if(m>0){n++;q+=m}});return {n:n,q:q,c:it.price*q/1000}}
+  function rowCost(r){var it=r.items.find(function(x){return x.id===r.pick}),lp=it?livePrice(it.id):null;if(!it||lp==null)return {n:0,q:0,c:0};var n=0,q=0;list.forEach(function(v){var m=missing(v,r);if(m>0){n++;q+=m}});return {n:n,q:q,c:lp*q/1000}}
   function paint(){
     var tot=0,picked=0;
     document.getElementById('oel').innerHTML=rows.map(function(r,i){var rc=rowCost(r);tot+=rc.c;if(r.pick&&rc.n)picked++;
       var noGoal=list.filter(function(v){return !((v.goals||{})[r.s])}).length,nm=STAT_NAME[r.s];
       return '<div class="oer"><div class="oeh"><b>'+esc(nm)+'</b></div>'+
-        (r.items.length?'<select data-oe="'+i+'"><option value="">Skip '+esc(nm.toLowerCase())+'</option>'+r.items.map(function(it){var b=it.key&&BAL[it.key]?BAL[it.key].r:null;return '<option value="'+esc(it.id)+'"'+(it.id===r.pick?' selected':'')+'>'+esc(it.name)+(it.site?' · '+esc(it.site):'')+(b?' ('+esc(balTxt(b))+')':'')+' — '+usd2(it.price)+' / 1K</option>'}).join('')+'</select>'+
+        (r.items.length?(function(){var it=r.items.find(function(x){return x.id===r.pick});
+          if(!r.open)return '<button type="button" class="oepick" data-oeo="'+i+'">'+(it?'<span><b>'+esc(it.name)+'</b><small>'+(livePrice(it.id)!=null?usd2(livePrice(it.id))+' / 1K':'')+'</small></span>':'<span><b>Skip '+esc(nm.toLowerCase())+'</b></span>')+'<span class="chev">▾</span></button>';
+          return '<div class="oelist"><div class="pk-row svr skip'+(!r.pick?' on':'')+'" data-oes="'+i+'" data-v="" role="button"><span class="svm"><b>Skip '+esc(nm.toLowerCase())+'</b></span></div>'+r.items.map(function(x){return svcRowHtml(x,x.id===r.pick,canPanels(),'data-oes="'+i+'" data-v="'+esc(x.id)+'" role="button"')}).join('')+'</div>'})()+
         (r.pick&&noGoal?'<input type="text" inputmode="numeric" data-oa="'+i+'" value="'+esc(r.amt)+'" placeholder="How many for the '+noGoal+' without a goal">':'')+
         (r.pick?'<div class="oec">'+(rc.n?rc.q.toLocaleString('en-US')+' across '+rc.n+' video'+(rc.n===1?'':'s')+' · <b>'+usd2(rc.c)+'</b>':'Every video already has enough '+esc(nm.toLowerCase()))+'</div>':''):'<div class="pk-none" style="padding:4px 0">No '+esc(nm.toLowerCase())+' services yet.</div>')+'</div>'}).join('');
     document.getElementById('oet').innerHTML='<span>Grand total</span><b>'+usd2(tot)+'</b>';
@@ -1417,15 +1474,18 @@ async function orderEverything(list){
   }
   openSheet('<h3>Order everything</h3><div class="pinfo">Pick a service for each stat you want. It fills what every video this month is still missing to reach its goal.</div><div class="oel" id="oel"></div><div class="pk-cost" id="oet"></div><button class="btn" id="ok" disabled style="opacity:.45">Continue to payment</button><button class="btn alt" id="x">Cancel</button>');
   var box=document.getElementById('oel');
-  box.addEventListener('change',function(e){var t=e.target;if(t.dataset.oe!=null){rows[+t.dataset.oe].pick=t.value;paint()}});
+  box.addEventListener('click',function(e){if(e.target.closest('[data-vd]'))return;var o=e.target.closest('[data-oeo]');if(o){rows.forEach(function(x,j){x.open=j===+o.dataset.oeo});paint();return}
+    var t=e.target.closest('[data-oes]');if(!t||t.classList.contains('dis'))return;var r=rows[+t.dataset.oes];if(t.dataset.v&&livePrice(t.dataset.v)==null)return;r.pick=t.dataset.v;r.open=false;paint()});
   box.addEventListener('input',function(e){var t=e.target;if(t.dataset.oa!=null){rows[+t.dataset.oa].amt=t.value;var pos=t.selectionStart;paint();var f=box.querySelector('[data-oa="'+t.dataset.oa+'"]');if(f){f.focus();try{f.setSelectionRange(pos,pos)}catch(_){}}}});
   document.getElementById('x').onclick=closeSheet;
   if(canPanels()){var bk=[];rows.forEach(function(r){r.items.forEach(function(it){if(it.key&&bk.indexOf(it.key)<0)bk.push(it.key)})});
     Promise.all(bk.map(balFor)).then(function(){if(document.getElementById('oel'))paint()})}
+  var allRefs=[];rows.forEach(function(r){r.items.forEach(function(it){allRefs.push(it.id)})});
+  liveFor(allRefs).then(function(){if(document.getElementById('oel'))paint()});
   document.getElementById('ok').onclick=async function(){
     var b=this;b.disabled=true;b.textContent='Saving...';var stats=[];
     for(var i=0;i<rows.length;i++){var r=rows[i],it=r.items.find(function(x){return x.id===r.pick});if(!it)continue;stats.push(r.s);
-      for(var j=0;j<list.length;j++){var v=list[j],g=+((v.goals||{})[r.s]||0)||qnum(r.amt);if(g>0&&missing(v,r)>0)await otApi.setStat(v,r.s,{qty:g,plan:{ref:it.id,name:it.name,price:it.price}})}}
+      for(var j=0;j<list.length;j++){var v=list[j],g=+((v.goals||{})[r.s]||0)||qnum(r.amt);if(g>0&&missing(v,r)>0)await otApi.setStat(v,r.s,{qty:g,plan:{ref:it.id,name:it.name,price:livePrice(it.id)}})}}
     orderSheet(list,false,stats);
   };
   paint();
