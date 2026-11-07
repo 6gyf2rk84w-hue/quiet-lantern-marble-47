@@ -10,8 +10,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#0B1A26">
 <title>Panel Tracker</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Geist:wght@400;600;700;800&display=swap">
 <link rel="stylesheet" href="order-tracker.css">
 <style>
 :root{--bg:#0B1A26;--card:#1C2C38;--card2:#2C3C48;--line:rgba(255,255,255,.11);--ink:#fff;--mute:rgba(255,255,255,.62);--a1:#12C26A;--a2:#2BF08F;--ok:#34d399;--bad:#fb7185;--wait:#fbbf24;--part:#f97316;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -319,6 +317,7 @@ input,textarea,select{font-size:max(16px,1em)!important}
 .gempty b{font-size:19px;color:#fff}
 .gempty span{color:rgba(255,255,255,.62);font-size:15px;margin-bottom:6px}
 </style>
+<link rel="stylesheet" href="obsidian.css">
 </head>
 <body class="ot-on">
 <div id="topbar"><div class="tbi"><div class="stabs"></div><button class="omore" data-more="1" aria-label="More">&#8943;</button></div></div>
@@ -800,7 +799,7 @@ function mountOrders(){
     onPick:function(o,s,done){pickService(o,s,done)},
     deal:dealFor,onDeal:editDeal,noDealPrompt:setupShown,
     rates:gRates,suggest:suggestFor,
-    monthTitle:true,archived:isArchived,onMonthPick:pickMonth,
+    monthTitle:true,archived:isArchived,onMonthPick:pickMonth,ownOnly:true,hideDeal:true,
     onOrder:function(o){orderSheet([o],true)},onOrderAll:function(l){orderEverything(l)},
     preview:canVideos()&&IG.sql?{fetch:function(link,o){return igPreview(o)}}:null,
     beforeRefresh:function(){return igSync(false)},
@@ -1012,20 +1011,23 @@ function paintStats(anim){
   if(!user||!canVideos()){el.innerHTML='';return}
   var m=statsMonth(),d=dealFor(m),ttl='<button class="smt" data-gmonth="1" aria-label="Pick a month">'+esc(mName(m))+'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>';
   if(!d){el.innerHTML=ttl+'<div class="gbox"><div class="gempty"><b>Set your monthly deal first</b><span>Your CPM goals come from it.</span><button class="btn" data-gdeal="1">Set monthly deal</button></div></div>';return}
-  var pay=payFor(d),views=ownViews(m),cur=views>0?pay/views*1000:null,c=cpmFor(m),h;
+  var pay=payFor(d),views=ownViews(m),cur=views>0?pay/views*1000:null,c=cpmFor(m),h,deal=otApi&&otApi.dealHtml?otApi.dealHtml():'';
+  deal=deal?'<div class="ot ot-embed">'+deal+'</div>':'';
   if(gTab==='all'){
     var T=[5,4,3,2,1].map(function(t){return {t:t,v:pay/t*1000}}),stops=[0].concat(T.map(function(x){return x.v})),f=1;
     for(var i=1;i<stops.length;i++){if(views<=stops[i]){f=(i-1+(views-stops[i-1])/(stops[i]-stops[i-1]))/(stops.length-1);break}}
-    h='<div class="gtl">Views toward CPM goals · '+(+d.count)+' '+(+d.count===1?'video':'videos')+'</div>'+
+    h='<div class="gtl"><span>Views toward CPM goals</span><em>'+(+d.count)+' '+(+d.count===1?'video':'videos')+'</em></div>'+
       gTrack(f,views,cur,T.map(function(x,i){return (i+1)/T.length}),T.map(function(x,i){return {p:(i+1)/T.length,t:'$'+x.t,s:gfmt(x.v)}}));
   }else if(!c){
     h='<div class="gempty"><b>🎯 No CPM goal yet</b><span>Set one and every video gets a suggested views goal.</span><button class="btn" data-gcpm="1">Set CPM goal</button></div>';
   }else{
     var need=needFor(pay,c);
-    h='<div class="gmh"><div><div class="gcpm">🎯 '+cpmTxt(c,2)+' CPM</div><div class="gneed">needs '+gfmt(need)+' real views</div></div><button class="gchg" data-gcpm="1">✏️ Change</button></div>'+
+    h='<div class="gmh"><div><div class="gcpm">🎯 '+cpmTxt(c,2)+' CPM</div><div class="gneed">needs '+gfmt(need)+' real views</div></div><button class="gchg" data-gcpm="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4"/></svg>Change</button></div>'+
       gTrack(views/need,views,cur,[1],[{p:1,t:cpmTxt(c,2),s:gfmt(need)}]);
   }
-  el.innerHTML=ttl+'<div class="gbox"><div class="gtabs"><button data-gtab="all"'+(gTab==='all'?' class="on"':'')+'>All goals</button><button data-gtab="mine"'+(gTab==='mine'?' class="on"':'')+'>🎯 My goal</button></div>'+h+'</div>';
+  el.classList.toggle('enter',!!anim);
+  el.innerHTML=ttl+deal+'<div class="gbox"><div class="gtabs"><button data-gtab="all"'+(gTab==='all'?' class="on"':'')+'>All goals</button><button data-gtab="mine"'+(gTab==='mine'?' class="on"':'')+'>🎯 My goal</button></div>'+h+'</div>';
+  if(anim)countUpIn(el);
   var t=el.querySelector('.gtrk');if(!t)return;
   var fill=t.querySelector('.gfill'),bub=t.querySelector('.gbub'),W=t.querySelector('.gbar').offsetWidth,fr=+t.dataset.frac;
   var px=Math.max(t.dataset.some==='1'?22:0,Math.round(fr*W)),bw=bub.offsetWidth,left=Math.max(0,Math.min(W-bw,px-40));
@@ -1033,11 +1035,46 @@ function paintStats(anim){
   if(anim){fill.style.width='0px';requestAnimationFrame(function(){requestAnimationFrame(function(){fill.style.width=px+'px'})})}else{fill.style.transition='none';fill.style.width=px+'px'}
 }
 document.getElementById('statsroot').addEventListener('click',function(e){
-  var b=e.target.closest('[data-gtab],[data-gcpm],[data-gdeal],[data-gmonth]');if(!b)return;
+  var b=e.target.closest('[data-gtab],[data-gcpm],[data-gdeal],[data-gmonth],[data-ot-deal]');if(!b)return;
+  if(b.dataset.otDeal!==undefined){editDeal();return}
   if(b.dataset.gtab){if(gTab!==b.dataset.gtab){gTab=b.dataset.gtab;paintStats(true)}}
   else if(b.dataset.gcpm)editCpm(statsMonth());else if(b.dataset.gdeal)editDeal();else if(b.dataset.gmonth)pickMonth();
 });
 window.addEventListener('resize',function(){if(scr==='stats')paintStats()});
+
+/* ---------- Feel: a light tap on every press, cards tilt under your finger ---------- */
+// iPhone (iOS 18+): toggling a hidden switch gives the system's light tap. Android: vibrate.
+var hapEl=null;
+function haptic(){
+  try{
+    if(navigator.vibrate){navigator.vibrate(8);return}
+    if(!hapEl){hapEl=document.createElement('label');hapEl.setAttribute('aria-hidden','true');hapEl.style.cssText='position:fixed;left:-200px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';
+      var sw=document.createElement('input');sw.type='checkbox';sw.setAttribute('switch','');sw.tabIndex=-1;hapEl.appendChild(sw);document.body.appendChild(hapEl)}
+    hapEl.click();
+  }catch(e){}
+}
+document.addEventListener('click',function(e){
+  if(!e.isTrusted)return;
+  var t=e.target.closest('button,a[href],.sec,.ord,.sh,[data-ot-pick],[data-scr]');
+  if(t&&!t.disabled)haptic();
+},true);
+var tilt=null,TILT='.ot-card,.gbox,.ot-deal,.sec,.ord,.sbox';
+function tiltOff(){if(!tilt)return;var c=tilt.el;c.style.transition='transform .45s cubic-bezier(.2,.8,.2,1)';c.style.transform='';tilt=null}
+document.addEventListener('touchstart',function(e){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  var c=e.target.closest(TILT);if(!c||e.touches.length>1)return;
+  var r=c.getBoundingClientRect(),t=e.touches[0],x=(t.clientX-r.left)/r.width-.5,y=(t.clientY-r.top)/r.height-.5;
+  tilt={el:c,x0:t.clientX,y0:t.clientY};
+  c.style.transition='transform .18s ease-out';c.style.transform='perspective(900px) rotateX('+(-y*5).toFixed(2)+'deg) rotateY('+(x*6).toFixed(2)+'deg) scale(.99)';
+},{passive:true});
+document.addEventListener('touchmove',function(e){if(!tilt)return;var t=e.touches[0];if(Math.abs(t.clientX-tilt.x0)>8||Math.abs(t.clientY-tilt.y0)>8)tiltOff()},{passive:true});
+document.addEventListener('touchend',tiltOff,{passive:true});
+document.addEventListener('touchcancel',tiltOff,{passive:true});
+function countUpIn(el){
+  var n=el.querySelector('[data-ot-count]');if(!n||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  var to=+n.dataset.otCount,t0=performance.now(),f=function(v){return '$'+(Math.round(v*100)/100).toLocaleString('en-US',{maximumFractionDigits:2})};
+  (function step(t){var k=Math.min(1,(t-t0)/900),q=1-Math.pow(1-k,3);n.textContent=f(to*q);if(k<1&&n.isConnected)requestAnimationFrame(step)})(t0);
+}
 
 /* ---------- Months: tap the title for the list; archive last month once its orders are done ---------- */
 function mName(m){var y=+m.slice(0,4),k=+m.slice(5,7);return new Date(y,k-1,1).toLocaleString('en-US',{month:'long'})+(y!==new Date().getFullYear()?' '+y:'')}
@@ -1198,11 +1235,11 @@ function orderSheet(list,single){
   }
   var total=0,rows='';
   if(single){
-    planned(v).forEach(function(r){total+=r.cost;rows+='<div class="osr"><span><b>'+esc(STAT_NAME[r.s])+'</b><small>'+esc(r.svc)+(r.name&&r.name!==r.svc?' · '+esc(r.name):'')+' · '+r.qty.toLocaleString('en-US')+'</small></span><em>'+usd2(r.cost)+'</em></div>'});
+    planned(v).forEach(function(r){total+=r.cost;rows+='<div class="osr one"><i class="oic">'+(window.OrderTracker&&OrderTracker.icon?OrderTracker.icon(r.s,20):'')+'</i><b>'+esc(STAT_NAME[r.s])+'</b><span class="oq">'+r.qty.toLocaleString('en-US')+'</span><em>'+usd2(r.cost)+'</em></div>'});
   }else{
     list.forEach(function(x){var pl=planned(x),t=pl.reduce(function(a,r){return a+r.cost},0);total+=t;rows+='<div class="osr"><span><b>'+esc(x.title||'Untitled video')+'</b><small>'+(pl.length?pl.map(function(r){return STAT_NAME[r.s]}).join(', '):'Nothing to order yet')+'</small></span><em>'+(pl.length?usd2(t):'')+'</em></div>'});
   }
-  openSheet('<h3>'+(single?'Place order':'Order everything')+'</h3>'+(single?'<p class="pinfo">'+esc(v.title||'This video')+'</p>':'<p class="pinfo">Every video still running this month.</p>')+'<div class="osl">'+rows+'</div><div class="pk-cost"><span>Total</span><b>'+usd2(total)+'</b></div><button class="btn" id="pay" disabled style="opacity:.45">Pay &amp; place order'+(single?'':'s')+'</button><p class="pinfo" style="text-align:center;margin-top:-4px">Placing orders unlocks once your panels are connected.</p>'+(single?'<button class="btn alt" id="chg">Change services</button>':'')+'<button class="btn alt" id="x">Close</button>');
+  openSheet('<h3>'+(single?'Place order':'Order everything')+'</h3>'+(single?'<p class="pinfo">'+esc(v.title||'This video')+'</p>':'<p class="pinfo">Every video still running this month.</p>')+'<div class="osl">'+rows+'</div><div class="pk-cost"><span>Total</span><b>'+usd2(total)+'</b></div><button class="btn" id="pay" disabled style="opacity:.45"><svg class="lk" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Pay &amp; place order'+(single?'':'s')+'</button><p class="pinfo" style="text-align:center;margin-top:-4px">Placing orders unlocks once your panels are connected.</p>'+(single?'<button class="btn alt" id="chg">Change services</button>':'')+'<button class="btn alt" id="x">Close</button>');
   if(single)document.getElementById('chg').onclick=function(){logWizard(v,function(s,res){return otApi.setStat(v,s,res)})};
   document.getElementById('x').onclick=closeSheet;
 }
@@ -1354,7 +1391,7 @@ function setScreen(n,dir){
   var l=screens();if(n===scr||l.indexOf(n)<0)return;
   var from=scrEl(scr),to=scrEl(n);scrY[scr]=window.scrollY;
   from.style.display='none';from.style.transform='';from.style.opacity='';
-  var was=scr;scr=n;to.style.display='block';document.body.classList.toggle('ot-on',n!=='panels');if(n==='stats')paintStats(true);
+  var was=scr;scr=n;to.style.display='block';document.body.classList.toggle('ot-on',n!=='panels');if(n==='stats')paintStats(true);if(n==='orders'&&otApi&&otApi.fillIn)otApi.fillIn();
   document.getElementById('menu').classList.remove('on');paintDots(was);paintMenu();window.scrollTo(0,scrY[n]||0);
   if(dir==null)dir=l.indexOf(n)>l.indexOf(was)?1:-1;
   try{to.animate([{transform:'translateX('+(dir*36)+'%)',opacity:.3},{transform:'none',opacity:1}],{duration:260,easing:'cubic-bezier(.2,.8,.2,1)'})}catch(e){}

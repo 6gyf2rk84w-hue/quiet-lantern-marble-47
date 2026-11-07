@@ -31,6 +31,8 @@
  *   onLogged(o, setStat) — runs after a video is logged; setStat(stat, {qty, plan} | null)
  *   confirm(what, go) — host asks "are you sure?" before a delete, then calls go()
  *   linkPlaceholder: string — grey example text in the link box
+ *   ownOnly: true — everyone sees only their own videos (no person filter, no "by" tags)
+ *   hideDeal: true — the monthly deal card isn't drawn here; dealHtml() hands it to the host instead
  *   monthTitle: true — the month name is the big title (tap → onMonthPick()); no month switch or Archive list.
  *             Months stay open until archived(month) is true (anything older than last month is archived).
  *             API: setMonth(m), resetMonth(), months() → [{m, name, archived, count, views}], month
@@ -81,7 +83,7 @@
     const ratesFor = m => Object.assign({}, DEF_RATES, (typeof opt.rates === "function" ? (() => { try { return opt.rates(m); } catch (e) { return null; } })() : opt.rates) || {});
     const L = Object.assign({ order: "order", orders: "orders" }, opt.labels || {});
     const st = { orders: [], month: monthKey(Date.now()), edit: null, open: null, ask: null, busy: false, arch: null, who: null, shown: {}, adding: false };
-    const vis = () => st.who ? st.orders.filter(o => o._by === st.who) : st.orders;
+    const vis = () => opt.ownOnly ? st.orders.filter(o => !opt.me || !o._by || o._by === opt.me) : st.who ? st.orders.filter(o => o._by === st.who) : st.orders;
     const planText = p => opt.planLabel ? opt.planLabel(p) : (p.site || p.name || "");
     root.classList.add("ot");
 
@@ -167,14 +169,13 @@
     }
     function statCard(o, s, label, ic, now) {
       const S = state(o, s, now); if (S === "none" || S === "g") return "";
-      const p = planOf(o, s);
       return `<div class="ot-stc s-${S}"${RO ? "" : ` data-ot-pick="${esc(o.id)}|${s}"`}><span class="ic">${icon(s) || ic}</span><div class="bd">
-        <div class="n"><b>${fmt(real(o, s))} / ${fmt(goal(o, s))}</b><small class="ot-sr">${label}</small></div>${barRow(o, s, label, S)}${p ? `<em class="ot-plan">${esc(planText(p))} · ${usd(statValue(o, s))}</em>` : ""}</div></div>`;
+        <div class="n"><b>${fmt(real(o, s))}</b><span class="d">/ ${fmt(goal(o, s))}</span><small class="ot-sr">${label}</small></div>${barRow(o, s, label, S)}</div></div>`;
     }
     function card(o, n, now) {
       const ed = st.edit === o.id, vg = goal(o, "views"), vS = state(o, "views", now), usdV = value(o);
-      const head = `<div class="ot-hd"><div class="ot-name"><small class="ot-num">${esc(L.order[0].toUpperCase() + L.order.slice(1))} ${n}${!st.who && opt.byLabel && opt.byLabel(o) ? ` <span class="ot-by">${esc(opt.byLabel(o))}</span>` : ""}${o.auto ? ` <span class="ot-by ot-auto">⚡ auto-logged</span>` : ""}</small>${o.title ? `<span class="ot-ttl">${esc(o.title)}</span>` : ""}</div>
-        <div class="ot-hdr">${!ed && usdV ? `<b class="ot-tot">${usd(usdV)}</b>` : ""}${RO ? "" : `<button class="ot-edbtn" type="button" data-ot-edit="${esc(o.id)}">${ed ? "Done" : "✏️ Edit"}</button>`}</div></div>`;
+      const head = `<div class="ot-hd"><div class="ot-name"><small class="ot-num">${esc(L.order[0].toUpperCase() + L.order.slice(1))} ${n}${!opt.ownOnly && !st.who && opt.byLabel && opt.byLabel(o) ? ` <span class="ot-by">${esc(opt.byLabel(o))}</span>` : ""}${o.auto ? ` <span class="ot-by ot-auto">⚡ auto-logged</span>` : ""}</small>${o.title ? `<span class="ot-ttl">${esc(o.title)}</span>` : ""}</div>
+        <div class="ot-hdr">${!ed && usdV ? `<b class="ot-tot"><small>Total</small>${usd(usdV)}</b>` : ""}${RO ? "" : `<button class="ot-edbtn" type="button" data-ot-edit="${esc(o.id)}">${ed ? "Done" : `<svg class="ot-pen" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4"/></svg>Edit`}</button>`}</div></div>`;
       if (ed) return `<div class="ot-card">${head}
         <div class="ot-egrid" style="grid-template-columns:1fr"><label>Title<input class="ot-in" data-ot-f="title" value="${esc(o.title)}"></label>
         <label>Post link<input class="ot-in" data-ot-f="link" inputmode="url" value="${esc(o.link)}"></label></div>
@@ -182,10 +183,10 @@
         <div class="ot-row"><button class="ot-btn" type="button" data-ot-save="${esc(o.id)}">Save</button><button class="ot-btn danger" type="button" data-ot-del="${esc(o.id)}">Delete ${esc(L.order)}</button></div></div>`;
       const done = STATS.filter(([s]) => goal(o, s) && s !== "views" && state(o, s, now) === "g");
       const thumb = o.link ? `<a class="ot-thumb" href="${esc(o.link)}" target="_blank" rel="noopener" style="${o.thumb ? `background-image:url('${esc(o.thumb)}')` : ""}" aria-label="Open the post"></a>` : `<span class="ot-thumb"></span>`;
-      return `<div class="ot-card">${head}
+      return `<div class="ot-card" style="--i:${n}">${head}
         <div class="ot-main">${thumb}<div class="ot-info">
-        <div class="ot-views"${RO ? "" : ` data-ot-pick="${esc(o.id)}|views"`}>${num(real(o, "views"))}<span class="g"> / ${vg ? fmt(vg) : "---"}</span><small>views</small>${vS === "g" ? `<span class="ot-chk">✓</span>` : ""}${planOf(o, "views") ? `<em class="ot-plan">${esc(planText(planOf(o, "views")))} · ${usd(statValue(o, "views"))}</em>` : ""}</div>
-        ${vg && vS !== "g" ? barRow(o, "views", "Views", vS) : ""}
+        <div class="ot-vwell"><div class="ot-views"${RO ? "" : ` data-ot-pick="${esc(o.id)}|views"`}>${num(real(o, "views"))}<span class="g"> / ${vg ? fmt(vg) : "---"}</span><small>views</small>${vS === "g" ? `<span class="ot-chk">✓</span>` : ""}</div>
+        ${vg && vS !== "g" ? barRow(o, "views", "Views", vS) : ""}</div>
         ${sugTag(o)}
         ${showOrder(o) ? `<button class="ot-po" type="button" data-ot-order="${esc(o.id)}"><svg class="ot-cart" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 3.5h2.6l2.3 11.2a1.6 1.6 0 0 0 1.6 1.3h8.4a1.6 1.6 0 0 0 1.6-1.2l1.6-6.8H6.2"/><circle cx="9.6" cy="20" r="1.5"/><circle cx="17.2" cy="20" r="1.5"/><path d="M12.6 7.2v4.6M10.3 9.5h4.6"/></svg><span>Place order</span></button>` : ""}</div></div>
         <div class="ot-stats">${STATS.slice(1).map(([s, lb, ic]) => statCard(o, s, lb, ic, now)).join("")}</div>
@@ -194,7 +195,7 @@
 </div>`;
     }
     const cash = v => "$" + (Math.round(v * 100) / 100).toLocaleString("en-US", { maximumFractionDigits: 2 });
-    const showDeal = () => !RO && opt.deal && (!st.who || st.who === opt.me);
+    const showDeal = () => !RO && opt.deal && !opt.hideDeal && (!st.who || st.who === opt.me);
     const dealOf = m => { try { return opt.deal(m); } catch (e) { return null; } };
     const ownIn = m => st.orders.filter(o => o.month === m && (!opt.me || !o._by || o._by === opt.me));
     function dealCard(cur) {
@@ -215,7 +216,7 @@
       const step = t => { const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.textContent = cash(from + (to - from) * e); if (k < 1 && el.isConnected) requestAnimationFrame(step); };
       el.textContent = cash(from); requestAnimationFrame(step);
     }
-    const people = () => { try { return (opt.people && opt.people()) || []; } catch (e) { return []; } };
+    const people = () => { if (opt.ownOnly) return []; try { return (opt.people && opt.people()) || []; } catch (e) { return []; } };
     function draw() {
       const now = Date.now(), months = shownMonths();
       if (MT && (!st.picked || !months.includes(st.month))) { st.month = openMonths()[0]; st.picked = false; }
@@ -243,6 +244,9 @@
       if (st.ask) { const [id, s] = st.ask, o = st.orders.find(x => x.id === id), lb = (STATS.find(x => x[0] === s) || [])[1];
         h += `<div class="ot-pop" data-ot-x="1"><div><b>${esc(lb)}</b><p>${fmt(real(o, s))} of ${fmt(goal(o, s))} (${pct(o, s)}%). Mark this goal complete?</p>
           <div class="ot-row"><button class="ot-btn" type="button" data-ot-mark="1">Mark complete</button><button class="ot-btn ghost" type="button" data-ot-x="1">Cancel</button></div></div></div>`; }
+      const pk = st.adding ? "add" : st.ask ? st.ask.join("|") : "";
+      if (pk && pk !== st.popKey) h = h.replace('class="ot-pop"', 'class="ot-pop new"');
+      st.popKey = pk;
       root.innerHTML = h; countUp();
     }
     function toast(m) { const t = document.createElement("div"); t.className = "ot-toast"; t.textContent = m; document.body.appendChild(t); setTimeout(() => t.remove(), 2200); }
@@ -301,7 +305,7 @@
     });
 
     // ---- start ----------------------------------------------------------------
-    store.load().then(o => { st.orders = Array.isArray(o) ? o : []; draw(); refresh(true); });
+    store.load().then(o => { st.orders = Array.isArray(o) ? o : []; draw(); fillIn(); refresh(true); });
     const every = (opt.refreshEveryMin || 10) * 60e3;
     const tick = setInterval(() => { if (!document.hidden) refresh(true); }, every);
     const redraw = setInterval(() => { if (!document.hidden && !st.adding && !root.querySelector("input:focus")) draw(); }, 60e3); // stall colors move with time
@@ -309,10 +313,13 @@
       try { const o = await store.load(); if (Array.isArray(o)) { st.orders = o; draw(); } } catch (e) {} }
     const monthsInfo = () => allMonths().slice().reverse().map(m => { const a = vis().filter(o => o.month === m);
       return { m, name: monthName(m), archived: isArch(m), count: a.length, views: a.reduce((t, o) => t + real(o, "views"), 0) }; });
-    return { refresh: () => refresh(false), reload, redraw: () => draw(), setStat, months: monthsInfo, needs,
-      setMonth(m) { st.month = m; st.picked = true; st.open = null; st.edit = null; draw(); window.scrollTo(0, 0); },
+    // entrance: bars fill and cards rise once when the screen or month opens (not on every refresh)
+    function fillIn() { root.classList.remove("ot-fillin"); void root.offsetWidth; root.classList.add("ot-fillin"); clearTimeout(st.fillT); st.fillT = setTimeout(() => root.classList.remove("ot-fillin"), 1400); }
+    return { refresh: () => refresh(false), reload, redraw: () => draw(), setStat, months: monthsInfo, needs, fillIn,
+      dealHtml() { return opt.deal && !RO && dealOf(st.month) ? dealCard(monthKey(Date.now())) : ""; },
+      setMonth(m) { st.month = m; st.picked = true; st.open = null; st.edit = null; draw(); fillIn(); window.scrollTo(0, 0); },
       resetMonth() { st.picked = false; st.open = null; draw(); }, get month() { return st.month; }, destroy() { clearInterval(tick); clearInterval(redraw); root.innerHTML = ""; root.classList.remove("ot"); }, get orders() { return st.orders; } };
   }
 
-  global.OrderTracker = { mount, cleanLink };
+  global.OrderTracker = { mount, cleanLink, icon: (s, size) => icon(s, size) };
 })(typeof window !== "undefined" ? window : globalThis);
