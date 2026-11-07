@@ -347,3 +347,10 @@ html,body{background:#060A18}
 .obl span{font-weight:700}.obl em{font-style:normal;color:var(--ob-steel);text-align:right}
 .obl.ok{border-color:rgba(52,211,153,.4)}.obl.ok em{color:var(--ob-G);text-shadow:0 0 10px rgba(52,211,153,.45)}
 .obl.bad{border-color:rgba(244,63,94,.5);background:rgba(244,63,94,.07)}.obl.bad em{color:#FF6B85}
+
+/* payment screen: one card per stat; short panels get a pulsing Add funds button */
+.osr .ovn{display:block;font:500 12px/1.2 var(--ob-font);color:var(--ob-steel);margin-top:2px}
+.oadd{flex:none;padding:9px 13px;border-radius:12px;background:linear-gradient(180deg,#FB7185,#E11D48);color:#fff;font:700 14px/1 var(--ob-font);text-decoration:none;animation:oaddP 1.6s ease-in-out infinite}
+.oadd:active{transform:scale(.95)}
+@keyframes oaddP{0%,100%{box-shadow:0 0 0 0 rgba(244,63,94,.55)}50%{box-shadow:0 0 0 7px rgba(244,63,94,0),0 0 16px rgba(244,63,94,.55)}}
+@media (prefers-reduced-motion:reduce){.oadd{animation:none}}

@@ -223,7 +223,7 @@
       else if (!months.includes(st.month)) st.month = months[months.length - 1];
       const cur = monthKey(now), mine = vis().filter(o => o.month === st.month).sort((a, b) => a.postedAt - b.postedAt);
       const live = mine.filter(o => !finished(o, now)), fin = mine.filter(o => finished(o, now));
-      const total = mine.reduce((t, o) => t + value(o), 0), dl = showDeal() ? dealOf(st.month) : null, left = dl ? Math.max(0, (+dl.count || 0) - ownIn(st.month).length) : 0;
+      const total = mine.reduce((t, o) => t + (o.placed || []).reduce((a, p) => a + (+p.cost || 0), 0), 0), dl = showDeal() ? dealOf(st.month) : null, left = dl ? Math.max(0, (+dl.count || 0) - ownIn(st.month).length) : 0;
       const arch = MT ? [] : [...new Set(vis().map(o => o.month).filter(m => !months.includes(m)))].sort().reverse();
       let h = `<div class="ot-top">${MT ? `<button class="ot-mt" type="button" data-ot-mpick="1" aria-label="Pick a month">${monthName(st.month)}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>${isArch(st.month) ? `<span class="ot-archtag">Archived</span>` : ""}`
           : `<div class="ot-seg">${months.map(m => `<button type="button" data-ot-m="${m}" aria-pressed="${m === st.month}">${monthName(m)}</button>`).join("")}</div>`}
@@ -317,7 +317,8 @@
       return { m, name: monthName(m), archived: isArch(m), count: a.length, views: a.reduce((t, o) => t + real(o, "views"), 0) }; });
     // entrance: bars fill and cards rise once when the screen or month opens (not on every refresh)
     function fillIn() { root.classList.remove("ot-fillin"); void root.offsetWidth; root.classList.add("ot-fillin"); clearTimeout(st.fillT); st.fillT = setTimeout(() => root.classList.remove("ot-fillin"), 1400); }
-    async function markOrdered(o, s, qty, rec) { o.ordered = o.ordered || {}; o.ordered[s] = (+o.ordered[s] || 0) + qty;
+    async function markOrdered(o, s, qty, rec) { o.ordered = o.ordered || {}; o.ordBase = o.ordBase || {};
+      if (!(+o.ordered[s])) o.ordBase[s] = real(o, s); o.ordered[s] = (+o.ordered[s] || 0) + qty;
       o.placed = o.placed || []; o.placed.push(Object.assign({ s, qty, at: Date.now() }, rec || {})); await save(); draw(); }
     return { refresh: () => refresh(false), reload, redraw: () => draw(), setStat, markOrdered, months: monthsInfo, needs, fillIn,
       dealHtml() { return opt.deal && !RO && dealOf(st.month) ? dealCard(monthKey(Date.now())) : ""; },
