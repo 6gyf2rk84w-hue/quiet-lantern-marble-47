@@ -341,7 +341,7 @@ input,textarea,select{font-size:max(16px,1em)!important}
 <script src="icons.js"></script>
 <script src="order-tracker.js"></script>
 <script>
-var KEY='order-tracker-v1',S={nodes:[],orders:[]},tab='main',path=[],openG={},sb=null,user=null,isAdmin=false,snap={n:{},o:{}},q=Promise.resolve(),hasPos=false,drag=null,dragging=false,gripOrders=false,isViewer=false,exOpen=false,hasOid=false,hasSvc=false,hasAppr=false,role='viewer',MEM=[];
+var KEY='order-tracker-v1',S={nodes:[],orders:[]},tab='working',path=[],openG={},sb=null,user=null,isAdmin=false,snap={n:{},o:{}},q=Promise.resolve(),hasPos=false,drag=null,dragging=false,gripOrders=false,isViewer=false,exOpen=false,hasOid=false,hasSvc=false,hasAppr=false,role='viewer',MEM=[];
 var SB_URL='https://ttnvbmqtyxbqfyxadjdf.supabase.co',SB_KEY='sb_publishable_1gfteu6dl--6yOo8FKMFow_QmAO7FGE';
 function localOld(){try{var r=JSON.parse(localStorage.getItem(KEY));if(r&&r.nodes&&r.nodes.length)return r}catch(e){}return null}
 function seedDefaults(){
@@ -403,7 +403,7 @@ async function setRole(nr){role=nr;isViewer=!canPanels();if(isViewer){editing=fa
 function applyRole(){paintMenu();paintDots()}
 // ⋯ menu, top to bottom — owner: Members, Connections, Login credentials, Edit mode · mods: Login credentials, Connections, Edit mode · users: Connections · Log out last
 function paintMenu(){
-  var mn=document.getElementById('menu'),ids=['modsBtn','igBtn','credsBtn','penBtn'],order=isAdmin?['modsBtn','igBtn','credsBtn','penBtn']:role==='mod'?['credsBtn','igBtn','penBtn']:canVideos()?['igBtn']:[];
+  var mn=document.getElementById('menu'),ids=['modsBtn','igBtn','credsBtn','penBtn'],order=isAdmin?['modsBtn','igBtn','credsBtn']:role==='mod'?['credsBtn','igBtn']:canVideos()?['igBtn']:[];
   ids.forEach(function(id){document.getElementById(id).style.display='none'});
   order.forEach(function(id){var b=document.getElementById(id);if(id==='penBtn'&&!(scr==='panels'&&canPanels()))return;b.style.display='block';mn.appendChild(b)});
   mn.appendChild(document.getElementById('logoutBtn'));
@@ -451,7 +451,8 @@ function kids(p){return S.nodes.filter(function(n){return n.parent===p})}
 function cur(){return path.length?path[path.length-1]:null}
 function chain(id){var c=[],n=node(id);while(n){c.unshift(n);n=n.parent?node(n.parent):null}return c}
 var editing=false;
-var TABS=[['main','Main'],['processing','Testing'],['working','Working'],['partial','Partial'],['failed','Failed']];
+var TABS=[['working','Working'],['processing','Testing'],['partial','Partial'],['failed','Failed']];
+function inSite(){var c=cur();return !!c&&!!node(c)&&node(c).parent!==null}
 var STS=[['processing','Testing','var(--wait)'],['working','Working','var(--ok)'],['partial','Partial','var(--part)'],['failed','Failed','var(--bad)']];
 function ordHtml(o){
   return '<div class="ord" data-oid="'+o.id+'" data-grp="'+o.status+'"><div class="top">'+(gripOrders?'<span class="grip" aria-label="Drag to reorder">\u22ee\u22ee</span>':'')+'<div style="flex:1;min-width:0">'+(o.svc?'<span class="svc">'+esc(o.svc)+'</span>':'')+'<div class="t">'+esc(o.title)+'</div><div class="price">'+esc(o.price)+' per 1,000</div>'+(editing&&!isViewer?'<button class="idbtn" data-editid="'+o.id+'">\u270e Edit details</button>':'')+'</div>'
@@ -461,21 +462,25 @@ function ordHtml(o){
 }
 function render(){
   var c=cur();
-  gripOrders=editing&&tab==='main'&&!!c&&!!node(c)&&node(c).parent!==null;
-  document.getElementById('back').style.display=(tab==='main'&&c)?'flex':'none';
-  document.getElementById('ttl').textContent=tab==='main'?(c?node(c).title:'Panels Tracker'):TABS.filter(function(t){return t[0]===tab})[0][1];
-  document.getElementById('crumb').textContent=(tab==='main'&&c)?chain(c).map(function(n){return n.title}).join('  \u203a  '):'';
-  document.getElementById('fab').style.display=(tab==='main'&&(isAdmin||(role==='mod'&&!!c&&!!node(c)&&node(c).parent!==null)))?'block':'none';
-  document.getElementById('pdone').style.display=editing?'flex':'none';paintMenu();
-  document.getElementById('tabs').innerHTML=TABS.map(function(t){return '<button data-t="'+t[0]+'" class="t-'+t[0]+(tab===t[0]?' on':'')+'">'+t[1]+'</button>'}).join('');
+  var site=inSite();
+  gripOrders=editing&&site;
+  document.getElementById('back').style.display=c?'flex':'none';
+  document.getElementById('ttl').textContent=c?node(c).title:'Panels Tracker';
+  document.getElementById('crumb').textContent=c?chain(c).map(function(n){return n.title}).join('  \u203a  '):'';
+  document.getElementById('fab').style.display=(isAdmin||(role==='mod'&&site))?'block':'none';
+  var pd=document.getElementById('pdone'),canEd=isAdmin||role==='mod';pd.style.display=canEd?'flex':'none';pd.classList.toggle('pen',!editing);pd.setAttribute('aria-label',editing?'Done editing':'Edit mode');
+  pd.innerHTML=editing?'Done':'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4"/></svg>';paintMenu();
+  var tb=document.getElementById('tabs');tb.style.display=site?'flex':'none';
+  tb.innerHTML=!site?'':TABS.map(function(t){return '<button data-t="'+t[0]+'" class="t-'+t[0]+(tab===t[0]?' on':'')+'">'+t[1]+'</button>'}).join('');
   var h='';
-  if(tab==='main'){
-    var ks=kids(c),os=S.orders.filter(function(o){return o.node===c});
+  if(true){
+    var ks=kids(c),os=S.orders.filter(function(o){return o.node===c}),tl=(TABS.filter(function(t){return t[0]===tab})[0]||TABS[0])[1];
     if(c&&node(c)&&node(c).parent!==null)h+='<div class="excard"><div class="exhead">Example Link<button class="exinfo'+(exOpen?' on':'')+'" data-exinfo="1" aria-label="About this link">?</button></div><div class="exlink">https://www.instagram.com/p/........../</div>'+(exOpen?'<div class="exnote">Orders must use this link format. Links in any other format may cause the order to fail.</div>':'')+'</div>';
+    if(site&&os.length&&!os.some(function(o){return o.status===tab}))h+='<div class="empty"><b>\u2728</b>Nothing in '+esc(tl)+' right now.</div>';
     if(!ks.length&&!os.length)h+='<div class="empty"><b>\u2728</b>'+(!c?'Clean slate.'+(isAdmin?'<br>Tap + to create your first title.':''):(node(c).parent===null?'No sites yet.'+(isAdmin?'<br>Tap + to add a website.':''):'No orders yet.'+(isViewer?'':'<br>Tap + to add an order.')))+'</div>';
-    if(ks.length){if(c)h+='<div class="sg">Sites</div>';ks.forEach(function(k){var n=kids(k.id).length,m=S.orders.filter(function(o){return o.node===k.id}).length,sub=k.parent===null?(n+(n===1?' site':' sites')):(m+(m===1?' order':' orders'));
-      h+='<div class="sec" data-open="'+k.id+'">'+(editing&&isAdmin&&k.parent!==null?'<span class="grip" aria-label="Drag to reorder">\u22ee\u22ee</span>':'')+'<div class="ico'+(k.img?'':' l')+(k.parent===null&&isAdmin&&editing?' ed':'')+'"'+(k.parent===null&&isAdmin&&editing?' data-icon="'+k.id+'"':'')+'>'+(k.img?'<img src="'+k.img+'" alt="">':esc(k.title.charAt(0).toUpperCase()))+'</div><div class="i"><div class="t">'+esc(k.title)+'</div><div class="s">'+sub+'</div></div>'+(editing&&isAdmin?'<button class="xdel" data-delnode="'+k.id+'" aria-label="Delete">\u2715</button>':'')+'<span class="chev">\u203a</span></div>'})}
-    STS.forEach(function(s){var g=os.filter(function(o){return o.status===s[0]});if(g.length)h+='<div class="sg"><span class="dot" style="background:'+s[2]+'"></span>'+s[1]+'</div>'+g.map(ordHtml).join('')});
+    if(ks.length){ks.forEach(function(k){var n=kids(k.id).length,m=S.orders.filter(function(o){return o.node===k.id}).length,sub=k.parent===null?(n+(n===1?' site':' sites')):'';
+      h+='<div class="sec" data-open="'+k.id+'">'+(editing&&isAdmin&&k.parent!==null?'<span class="grip" aria-label="Drag to reorder">\u22ee\u22ee</span>':'')+'<div class="ico'+(k.img?'':' l')+(k.parent===null&&isAdmin&&editing?' ed':'')+'"'+(k.parent===null&&isAdmin&&editing?' data-icon="'+k.id+'"':'')+'>'+(k.img?'<img src="'+k.img+'" alt="">':esc(k.title.charAt(0).toUpperCase()))+'</div><div class="i"><div class="t">'+esc(k.title)+'</div>'+(sub?'<div class="s">'+sub+'</div>':'')+'</div>'+(editing&&isAdmin?'<button class="xdel" data-delnode="'+k.id+'" aria-label="Delete">\u2715</button>':'')+'<span class="chev">\u203a</span></div>'})}
+    h+=os.filter(function(o){return o.status===tab}).map(ordHtml).join('');
   }else{
     var list=S.orders.filter(function(o){return o.status===tab});
     if(!list.length)h+='<div class="empty"><b>\u{1F4ED}</b>No orders here yet.</div>';
@@ -506,7 +511,7 @@ function newSite(){
 function newOrder(){
   openSheet('<h3>Add new service</h3><input type="text" id="f4" inputmode="numeric" placeholder="Service ID (optional)" autocomplete="off"><input type="text" id="f1" placeholder="Service title"><input type="number" id="f2" inputmode="decimal" placeholder="Price per 1,000"><button class="btn" id="ok">Add service</button><button class="btn alt" id="x">Cancel</button>');
   document.getElementById('ok').onclick=function(){var t=document.getElementById('f1').value.trim(),p=document.getElementById('f2').value.trim(),sv=document.getElementById('f4').value.trim();if(!t||!p)return;
-    S.orders.push({id:uid(),node:cur(),title:t,price:p,status:'processing',star:false,oid:'',svc:sv});save();closeSheet();render()};
+    S.orders.push({id:uid(),node:cur(),title:t,price:p,status:'processing',star:false,oid:'',svc:sv});tab='processing';save();closeSheet();render()};
   document.getElementById('x').onclick=closeSheet;
 }
 function openIcon(id){
@@ -728,11 +733,11 @@ document.addEventListener('click',function(e){
   else if(d.mods){openMembers();return}
   else if(d.creds){if(!isViewer)openCreds();return}
   else if(d.out){sb.auth.signOut().then(function(){location.reload()});return}
-  else if(d.back){path.pop();exOpen=false}
+  else if(d.back){path.pop();exOpen=false;tab='working'}
   else if(d.tog){openG[d.tog]=!openG[d.tog]}
   else if(d.t){tab=d.t}
   else if(d.delnode){if(!isAdmin)return;askDel('section and everything inside it',function(){delNode(d.delnode)});return}
-  else if(d.open){var on=node(d.open);if(on&&depth(on)<=1)path.push(d.open)}
+  else if(d.open){var on=node(d.open);if(on&&depth(on)<=1){path.push(d.open);tab='working'}}
   else if(d.delord){askDel('order',function(){S.orders=S.orders.filter(function(o){return o.id!==d.delord});save()});return}
   else if(d.st){var o2=S.orders.find(function(o){return o.id===d.o});o2.status=d.st;save()}
   render();
@@ -1049,7 +1054,7 @@ function haptic(){
   try{
     if(navigator.vibrate){navigator.vibrate(8);return}
     if(!hapEl){hapEl=document.createElement('label');hapEl.setAttribute('aria-hidden','true');hapEl.style.cssText='position:fixed;left:-200px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';
-      var sw=document.createElement('input');sw.type='checkbox';sw.setAttribute('switch','');sw.tabIndex=-1;hapEl.appendChild(sw);document.body.appendChild(hapEl)}
+      var sw=document.createElement('input');sw.type='checkbox';sw.setAttribute('switch','');sw.tabIndex=-1;hapEl.appendChild(sw);hapEl.addEventListener('click',function(ev){ev.stopPropagation()});document.body.appendChild(hapEl)}
     hapEl.click();
   }catch(e){}
 }
@@ -1423,6 +1428,10 @@ function swEnd(){
   if(!sw)return;var s=sw;sw=null;if(!s.on)return;
   swUntil=Date.now()+500;setTimeout(function(){document.body.classList.remove('swiping')},30);
   var el=scrEl(scr);
+  if(scr==='panels'&&inSite()&&Math.abs(s.dx)>Math.min(80,innerWidth*.2)){var ti=TABS.map(function(t){return t[0]}).indexOf(tab)+(s.dx<0?1:-1);
+    if(ti>=0&&ti<TABS.length){var dr=s.dx<0?1:-1;tab=TABS[ti][0];el.style.transform='';el.style.opacity='';render();window.scrollTo(0,0);
+      try{document.getElementById('main').animate([{transform:'translateX('+(dr*30)+'%)',opacity:.3},{transform:'none',opacity:1}],{duration:240,easing:'cubic-bezier(.2,.8,.2,1)'})}catch(e){}
+      var ob=document.querySelector('#tabs .on');if(ob&&ob.scrollIntoView)ob.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});return}}
   var l=screens(),next=l[l.indexOf(scr)+(s.dx<0?1:-1)];
   if(next&&Math.abs(s.dx)>Math.min(80,innerWidth*.2)){
     var dir=s.dx<0?1:-1;

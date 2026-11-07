@@ -296,3 +296,7 @@ html,body{background:#060A18}
 .exhead{font-size:12px!important}
 .exlink{font-size:12.5px!important;margin-top:2px!important}
 .idbtn{border:1px solid rgba(245,165,36,.65)!important;background:rgba(245,165,36,.14)!important;color:#FFD27A!important}
+
+/* Panels: pencil for Edit mode in the title row */
+#pdone.pen{width:40px;padding:0;justify-content:center;border-radius:12px;background:linear-gradient(180deg,#2B3550,#141B2E)!important;border:1px solid #2E3A5C!important;color:var(--ink)!important}
+#pdone svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
