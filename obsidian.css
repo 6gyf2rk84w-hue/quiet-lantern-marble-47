@@ -331,3 +331,7 @@ html,body{background:#060A18}
 /* Connections: names big and white, Connected + balance glow green */
 .cok{color:#fff!important;text-shadow:none!important;font-size:18px!important}
 #sheet .crow .stx.ok{color:var(--ob-G);text-shadow:0 0 10px rgba(52,211,153,.6)}
+
+/* placed / failed marks in the order results */
+.osr .pok{color:var(--ob-G)!important;text-shadow:0 0 10px rgba(52,211,153,.5)}
+.osr .pbad{color:var(--ob-R)!important}

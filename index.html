@@ -1295,9 +1295,64 @@ function orderSheet(list,single){
   }else{
     list.forEach(function(x){var pl=planned(x),t=pl.reduce(function(a,r){return a+r.cost},0);total+=t;rows+='<div class="osr"><span><b>'+esc(x.title||'Untitled video')+'</b><small>'+(pl.length?pl.map(function(r){return STAT_NAME[r.s]}).join(', '):'Nothing to order yet')+'</small></span><em>'+(pl.length?usd2(t):'')+'</em></div>'});
   }
-  openSheet('<h3>'+(single?'Place order':'Order everything')+'</h3>'+(single?'<p class="pinfo">'+esc(v.title||'This video')+'</p>':'<p class="pinfo">Every video still running this month.</p>')+'<div class="osl">'+rows+'</div><div class="pk-cost"><span>Total</span><b>'+usd2(total)+'</b></div><button class="btn" id="pay" disabled style="opacity:.45"><svg class="lk" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Pay &amp; place order'+(single?'':'s')+'</button><p class="pinfo" style="text-align:center;margin-top:-4px">Placing orders unlocks once your panels are connected.</p>'+(single?'<button class="btn alt" id="chg">Change services</button>':'')+'<button class="btn alt" id="x">Close</button>');
+  var live=single&&isAdmin;
+  openSheet('<h3>'+(single?'Place order':'Order everything')+'</h3>'+(single?'<p class="pinfo">'+esc(v.title||'This video')+'</p>':'<p class="pinfo">Every video still running this month.</p>')+'<div class="osl">'+rows+'</div><div class="pk-cost"><span>Total</span><b>'+usd2(total)+'</b></div><div class="perr" id="poerr"></div><button class="btn" id="pay"'+(live?'':' disabled style="opacity:.45"')+'><svg class="lk" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Pay &amp; place order'+(single?'':'s')+'</button>'+(live?'<p class="pinfo" style="text-align:center;margin-top:-4px">Orders go out on your connected panels.</p>':'<p class="pinfo" style="text-align:center;margin-top:-4px">'+(single?'Placing orders from here is owner-only while we test.':'Order everything goes live after single orders are tested.')+'</p>')+(single?'<button class="btn alt" id="chg">Change services</button>':'')+'<button class="btn alt" id="x">Close</button>');
   if(single)document.getElementById('chg').onclick=function(){logWizard(v,function(s,res){return otApi.setStat(v,s,res)})};
   document.getElementById('x').onclick=closeSheet;
+  if(live)document.getElementById('pay').onclick=function(){confirmPlace(v)};
+}
+
+/* ---------- Real orders: check everything first, then place each one once ---------- */
+var placing=false;
+function igLink(u){return /^https:\/\/(www\.)?instagram\.com\/(p|reel|reels|tv)\/[A-Za-z0-9_-]+\/?(\?.*)?$/i.test(String(u||'').trim())}
+function placeJobs(v){
+  return planned(v).map(function(r){var p=(v.plan||{})[r.s]||{},rec=S.orders.find(function(o){return o.id===p.ref});
+    return {s:r.s,qty:r.qty,cost:r.cost,rec:rec,site:rec?siteOf(rec):'',service:rec?String(rec.svc||'').trim():'',siteName:rec&&node(rec.node)?node(rec.node).title:''}});
+}
+function poRow(s,qty,right,cls){return '<div class="osr one"><i class="oic">'+(window.OrderTracker&&OrderTracker.icon?OrderTracker.icon(s,20):'')+'</i><b>'+esc(STAT_NAME[s])+'</b><span class="oq">'+qty.toLocaleString('en-US')+'</span><em'+(cls?' class="'+cls+'"':'')+'>'+right+'</em></div>'}
+function confirmPlace(v){
+  if(placing||!isAdmin)return;
+  var e=document.getElementById('poerr'),jobs=placeJobs(v),bad=[];
+  if(!igLink(v.link)){e.textContent='This video needs its Instagram post or Reel link first (https://www.instagram.com/p/... or /reel/...).';return}
+  jobs.forEach(function(j){if(!j.rec)bad.push(STAT_NAME[j.s]+': its service was removed from Panels. Pick another one.');else if(!/^\d+$/.test(j.service))bad.push(STAT_NAME[j.s]+': '+j.rec.title+' has no Service ID yet. Add it in Panels.')});
+  if(bad.length){e.innerHTML=bad.map(esc).join('<br>');return}
+  var total=jobs.reduce(function(a,j){return a+j.cost},0);
+  openSheet('<h3>Confirm order</h3><p class="pinfo">'+esc(v.title||'This video')+'</p><div class="osl">'+jobs.map(function(j){return poRow(j.s,j.qty,usd2(j.cost))}).join('')+'</div><div class="pk-cost"><span>Total</span><b>'+usd2(total)+'</b></div><p class="pinfo">This spends real money from your panel balances. Each order is placed once.</p><div class="perr" id="pcerr"></div><button class="btn" id="yes">Yes, place '+jobs.length+' order'+(jobs.length===1?'':'s')+'</button><button class="btn alt" id="x">Cancel</button>');
+  document.getElementById('x').onclick=closeSheet;
+  var yes=document.getElementById('yes');
+  yes.onclick=async function(){
+    if(placing)return;placing=true;yes.disabled=true;var err=document.getElementById('pcerr'),probs=[];
+    var stop=function(){err.innerHTML=probs.map(esc).join('<br>');yes.disabled=false;yes.textContent='Try again'};
+    try{
+      // 1. every panel needs enough balance for its part
+      yes.textContent='Checking balances…';
+      var need={};jobs.forEach(function(j){need[j.site]=(need[j.site]||0)+j.cost});
+      var sites=Object.keys(need),bals=await Promise.all(sites.map(function(s){return panelCall(s,{action:'balance'})}));
+      sites.forEach(function(s,i){var b=bals[i],nm=(jobs.find(function(j){return j.site===s})||{}).siteName||s;
+        if(b.error)probs.push(nm+': '+b.error);else if(!(Number(b.balance)>=need[s]))probs.push(nm+' has '+money(b.balance)+' but needs '+usd2(need[s])+'. Add funds there first.')});
+      if(probs.length)return stop();
+      // 2. each amount has to fit the service's minimum and maximum
+      yes.textContent='Checking services…';
+      var svcs=await Promise.all(jobs.map(function(j){return panelCall(j.site,{action:'service',service:j.service})}));
+      jobs.forEach(function(j,i){var r=svcs[i];if(r.error){probs.push(STAT_NAME[j.s]+': '+r.error);return}
+        if(r.min!=null&&j.qty<Number(r.min))probs.push(STAT_NAME[j.s]+': '+j.qty.toLocaleString('en-US')+' is below this service’s minimum of '+Number(r.min).toLocaleString('en-US')+'.');
+        if(r.max!=null&&Number(r.max)>0&&j.qty>Number(r.max))probs.push(STAT_NAME[j.s]+': '+j.qty.toLocaleString('en-US')+' is above this service’s maximum of '+Number(r.max).toLocaleString('en-US')+'.')});
+      if(probs.length)return stop();
+      // 3. place them one at a time; each success is saved right away, so it can't go out twice
+      var out=[];
+      for(var i=0;i<jobs.length;i++){var j=jobs[i];yes.textContent='Placing '+(i+1)+' of '+jobs.length+'…';
+        var r=await panelCall(j.site,{action:'add',service:j.service,link:String(v.link).trim(),quantity:String(j.qty)});
+        if(r.error||!r.order){out.push({j:j,err:r.error||'No order number came back.'});continue}
+        await otApi.markOrdered(v,j.s,j.qty,{order:String(r.order),site:j.site,svc:j.service,ref:j.rec.id,cost:Math.round(j.cost*10000)/10000});
+        out.push({j:j,order:r.order});
+      }
+      var okN=out.filter(function(x){return x.order}).length;
+      openSheet('<h3>'+(okN===out.length?'Orders placed':okN?'Some orders placed':'Orders not placed')+'</h3><div class="osl">'+out.map(function(x){return poRow(x.j.s,x.j.qty,x.order?'✓ #'+esc(x.order):'✕',x.order?'pok':'pbad')+(x.err?'<div class="perr" style="margin:-4px 0 8px">'+esc(x.err)+'</div>':'')}).join('')+'</div>'+(okN<out.length?'<p class="pinfo">The ones that failed weren’t charged. Tap Place order again to retry just those.</p>':'')+'<button class="btn" id="x">Done</button>');
+      document.getElementById('x').onclick=closeSheet;
+      if(okN)toast(okN+' order'+(okN===1?'':'s')+' placed.',true);
+    }catch(ex){probs=[String((ex&&ex.message)||ex)];stop()}
+    finally{placing=false}
+  };
 }
 
 /* ---------- Order everything: one service per stat, added to every video still missing it ---------- */

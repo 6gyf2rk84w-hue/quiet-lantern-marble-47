@@ -317,7 +317,9 @@
       return { m, name: monthName(m), archived: isArch(m), count: a.length, views: a.reduce((t, o) => t + real(o, "views"), 0) }; });
     // entrance: bars fill and cards rise once when the screen or month opens (not on every refresh)
     function fillIn() { root.classList.remove("ot-fillin"); void root.offsetWidth; root.classList.add("ot-fillin"); clearTimeout(st.fillT); st.fillT = setTimeout(() => root.classList.remove("ot-fillin"), 1400); }
-    return { refresh: () => refresh(false), reload, redraw: () => draw(), setStat, months: monthsInfo, needs, fillIn,
+    async function markOrdered(o, s, qty, rec) { o.ordered = o.ordered || {}; o.ordered[s] = (+o.ordered[s] || 0) + qty;
+      o.placed = o.placed || []; o.placed.push(Object.assign({ s, qty, at: Date.now() }, rec || {})); await save(); draw(); }
+    return { refresh: () => refresh(false), reload, redraw: () => draw(), setStat, markOrdered, months: monthsInfo, needs, fillIn,
       dealHtml() { return opt.deal && !RO && dealOf(st.month) ? dealCard(monthKey(Date.now())) : ""; },
       setMonth(m) { st.month = m; st.picked = true; st.open = null; st.edit = null; draw(); fillIn(); window.scrollTo(0, 0); },
       resetMonth() { st.picked = false; st.open = null; draw(); }, get month() { return st.month; }, destroy() { clearInterval(tick); clearInterval(redraw); root.innerHTML = ""; root.classList.remove("ot"); }, get orders() { return st.orders; } };
