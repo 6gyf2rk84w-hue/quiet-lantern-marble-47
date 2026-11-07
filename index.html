@@ -454,7 +454,7 @@ var editing=false;
 var TABS=[['main','Main'],['processing','Testing'],['working','Working'],['partial','Partial'],['failed','Failed']];
 var STS=[['processing','Testing','var(--wait)'],['working','Working','var(--ok)'],['partial','Partial','var(--part)'],['failed','Failed','var(--bad)']];
 function ordHtml(o){
-  return '<div class="ord" data-oid="'+o.id+'" data-grp="'+o.status+'"><div class="top">'+(gripOrders?'<span class="grip" aria-label="Drag to reorder">\u22ee\u22ee</span>':'')+'<div style="flex:1;min-width:0">'+(o.svc?'<span class="svc">Service '+esc(o.svc)+'</span>':'')+'<div class="t">'+esc(o.title)+'</div><div class="price">'+esc(o.price)+' per 1,000</div>'+(editing&&!isViewer?'<button class="idbtn" data-editid="'+o.id+'">\u270e Edit details</button>':'')+'</div>'
+  return '<div class="ord" data-oid="'+o.id+'" data-grp="'+o.status+'"><div class="top">'+(gripOrders?'<span class="grip" aria-label="Drag to reorder">\u22ee\u22ee</span>':'')+'<div style="flex:1;min-width:0">'+(o.svc?'<span class="svc">'+esc(o.svc)+'</span>':'')+'<div class="t">'+esc(o.title)+'</div><div class="price">'+esc(o.price)+' per 1,000</div>'+(editing&&!isViewer?'<button class="idbtn" data-editid="'+o.id+'">\u270e Edit details</button>':'')+'</div>'
   +'<div>'+(editing?'<button class="xdel" data-delord="'+o.id+'" aria-label="Delete">\u2715</button>':'')+'</div></div>'
   +ownerActs(o)+apvHtml(o)
   +'<div class="seg">'+STS.map(function(s){return '<button class="'+s[0]+(o.status===s[0]?' on':'')+'"'+(isViewer?' disabled':' data-st="'+s[0]+'" data-o="'+o.id+'"')+'>'+s[1]+'</button>'}).join('')+'</div></div>';
@@ -504,7 +504,7 @@ function newSite(){
   document.getElementById('x').onclick=closeSheet;
 }
 function newOrder(){
-  openSheet('<h3>Add new service</h3><input type="text" id="f1" placeholder="Service title"><input type="text" id="f4" inputmode="numeric" placeholder="Service number (optional)" autocomplete="off"><input type="number" id="f2" inputmode="decimal" placeholder="Price per 1,000"><button class="btn" id="ok">Add service</button><button class="btn alt" id="x">Cancel</button>');
+  openSheet('<h3>Add new service</h3><input type="text" id="f4" inputmode="numeric" placeholder="Service ID (optional)" autocomplete="off"><input type="text" id="f1" placeholder="Service title"><input type="number" id="f2" inputmode="decimal" placeholder="Price per 1,000"><button class="btn" id="ok">Add service</button><button class="btn alt" id="x">Cancel</button>');
   document.getElementById('ok').onclick=function(){var t=document.getElementById('f1').value.trim(),p=document.getElementById('f2').value.trim(),sv=document.getElementById('f4').value.trim();if(!t||!p)return;
     S.orders.push({id:uid(),node:cur(),title:t,price:p,status:'processing',star:false,oid:'',svc:sv});save();closeSheet();render()};
   document.getElementById('x').onclick=closeSheet;
@@ -579,7 +579,7 @@ async function placeOrder(id){
 }
 function editId(id){
   var o=S.orders.find(function(x){return x.id===id});if(!o)return;
-  openSheet('<h3>Edit service</h3><label class="fl2" for="f1">Title</label><input type="text" id="f1" autocomplete="off"><label class="fl2" for="f2">Price per 1,000</label><input type="text" id="f2" inputmode="decimal" autocomplete="off"><label class="fl2" for="f4">Service number</label><input type="text" id="f4" inputmode="numeric" placeholder="From the panel’s services list" autocomplete="off"><div class="perr" id="eerr"></div><button class="btn" id="ok">Save</button><button class="btn alt" id="x">Cancel</button>');
+  openSheet('<h3>Edit service</h3><label class="fl2" for="f4">Service ID</label><input type="text" id="f4" inputmode="numeric" placeholder="From the panel’s services list" autocomplete="off"><label class="fl2" for="f1">Title</label><input type="text" id="f1" autocomplete="off"><label class="fl2" for="f2">Price per 1,000</label><input type="text" id="f2" inputmode="decimal" autocomplete="off"><div class="perr" id="eerr"></div><button class="btn" id="ok">Save</button><button class="btn alt" id="x">Cancel</button>');
   var t=document.getElementById('f1'),pr=document.getElementById('f2'),g=document.getElementById('f4');t.value=o.title||'';pr.value=o.price==null?'':o.price;g.value=o.svc||'';
   document.getElementById('ok').onclick=function(){var tv=t.value.trim(),pv=pr.value.trim(),e=document.getElementById('eerr');
     if(!tv){e.textContent='Give the service a title.';return}if(!pv||!isFinite(parseFloat(pv.replace(/[^0-9.]/g,'')))){e.textContent='Type the price per 1,000.';return}

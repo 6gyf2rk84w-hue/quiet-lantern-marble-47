@@ -285,3 +285,14 @@ html,body{background:#060A18}
 .ot-fillin .ot-bar i{animation:obPwr 1.3s cubic-bezier(.3,.7,.2,1) both}
 @keyframes obPwr{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
 @media (prefers-reduced-motion:reduce){.ot-fillin .ot-bar i{animation:none}}
+
+/* Panels: compact header, full title, small example link, yellow Edit details */
+#top{background:rgba(6,10,24,.88)!important;padding:8px 14px 4px!important}
+#ttl{font:700 19px/1.2 -apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif!important;letter-spacing:-.01em!important;white-space:normal!important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+#crumb{font-size:12px!important;margin-top:1px!important}
+#tabs{padding:6px 18px 8px!important;gap:6px!important}
+#tabs button{height:30px!important;padding:0 11px!important;font-size:13px!important}
+.excard{margin:0 0 6px!important;padding:8px 12px!important;border-radius:12px!important}
+.exhead{font-size:12px!important}
+.exlink{font-size:12.5px!important;margin-top:2px!important}
+.idbtn{border:1px solid rgba(245,165,36,.65)!important;background:rgba(245,165,36,.14)!important;color:#FFD27A!important}
