@@ -321,3 +321,9 @@ html,body{background:#060A18}
 .glink:active{transform:scale(.97)}
 .gwarn{margin:4px 0 6px;padding:11px 13px;border-radius:12px;border:1px solid rgba(245,165,36,.55);background:rgba(245,165,36,.12);color:#FFD27A;font-size:14px;line-height:1.4}
 #pkey{margin-top:4px}
+
+/* small "?" help bubbles (Panels example link + Manual log link) */
+.exinfo{width:18px!important;height:18px!important;font-size:11px!important;border-width:1px}
+@keyframes expulse{0%,100%{box-shadow:0 0 0 0 rgba(251,191,36,0)}50%{box-shadow:0 0 0 3px rgba(251,191,36,.14),0 0 8px rgba(251,191,36,.35)}}
+.ot-lh{display:flex;align-items:center;gap:6px}
+.ot-lbl .exnote{margin-top:2px;font-weight:500;font-size:13px;overflow-wrap:anywhere}

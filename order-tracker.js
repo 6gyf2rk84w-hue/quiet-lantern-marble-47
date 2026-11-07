@@ -239,7 +239,7 @@
       if (arch.length) h += `<div class="ot-sec"><div class="ot-sec-h">Archive</div>${arch.map(m => { const a = vis().filter(o => o.month === m);
         return `<button class="ot-arow" type="button" data-ot-arch="${m}">${monthName(m)}<span>${fmt(a.reduce((t, o) => t + real(o, "views"), 0))} views · ${a.length} ${a.length === 1 ? esc(L.order) : esc(L.orders)}</span></button>${st.arch === m ? a.map((o, i) => card(o, i + 1, now)).join("") : ""}`; }).join("")}</div>`;
       if (st.adding && canAdd) h += `<div class="ot-pop" data-ot-x="1"><div><form class="ot-addf" data-ot-log="1" autocomplete="off"><b class="ot-addh">Manual log</b><span class="ot-addn">For a video you already posted. New posts with your auto-log phrase log themselves.</span>
-        <label class="ot-lbl">Title<input class="ot-in" name="title" placeholder="Title your video"></label><label class="ot-lbl">Link<input class="ot-in" name="link" inputmode="url" autocapitalize="off" placeholder="${esc(opt.linkPlaceholder || "Instagram post link")}"></label>
+        <label class="ot-lbl">Title<input class="ot-in" name="title" placeholder="Title your video"></label><div class="ot-lbl"><span class="ot-lh">Link<button class="exinfo" type="button" data-ot-lq="1" aria-label="About the link format">?</button></span><input class="ot-in" name="link" inputmode="url" autocapitalize="off" placeholder="${esc(opt.linkPlaceholder || "Instagram post link")}"><div class="exnote" hidden>Use your Instagram post or Reel link, like https://www.instagram.com/p/........../ or https://www.instagram.com/reel/........../. Orders must use this link format. Links in any other format may cause the order to fail.</div></div>
         <div class="ot-row"><button class="ot-btn" type="submit">Log it</button><button class="ot-btn ghost" type="button" data-ot-x="1">Cancel</button></div></form></div></div>`;
       if (st.ask) { const [id, s] = st.ask, o = st.orders.find(x => x.id === id), lb = (STATS.find(x => x[0] === s) || [])[1];
         h += `<div class="ot-pop" data-ot-x="1"><div><b>${esc(lb)}</b><p>${fmt(real(o, s))} of ${fmt(goal(o, s))} (${pct(o, s)}%). Mark this goal complete?</p>
@@ -253,6 +253,8 @@
 
     // ---- taps -----------------------------------------------------------------
     root.addEventListener("click", async e => {
+      const lq = e.target.closest("[data-ot-lq]");
+      if (lq) { e.preventDefault(); const n = lq.closest(".ot-lbl").querySelector(".exnote"); n.hidden = !n.hidden; lq.classList.toggle("on", !n.hidden); return; }
       const b = e.target.closest("[data-ot-mpick],[data-ot-sug],[data-ot-m],[data-ot-ref],[data-ot-edit],[data-ot-save],[data-ot-del],[data-ot-copy],[data-ot-bot],[data-ot-mark],[data-ot-x],[data-ot-open],[data-ot-arch],[data-ot-pick],[data-ot-focus],[data-ot-who],[data-ot-deal],[data-ot-add],[data-ot-order],[data-ot-orderall]");
       if (!b) return; const d = b.dataset;
       if (d.otX && e.target !== b) return;
