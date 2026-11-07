@@ -819,7 +819,7 @@ function qnum(v){return Math.round(parseFloat(String(v).replace(/[^0-9.]/g,''))|
 async function pickService(v,stat,done,step){
   var nm=STAT_NAME[stat]||stat,had=!!((v.goals||{})[stat]),plan=(v.plan||{})[stat]||null;
   var full=canPanels(),items=[],ptab='working',sel=plan&&plan.ref?plan.ref:null,note='';
-  var head=(step?'<div class="pk-step">Step '+step.i+' of '+step.n+'</div>':'')+'<h3>'+esc(nm)+' for '+(v.title?esc(v.title):'this video')+'</h3>';
+  var head=(step?'<div class="pk-step">Step '+step.i+' of '+step.n+'</div>':'')+'<h3>'+esc(nm)+' services</h3>';
   if(full){
     var sec=S.nodes.find(function(n){return n.parent===null&&n.title.trim().toLowerCase()===nm.toLowerCase()});
     var ids=sec?kids(sec.id).map(function(x){return x.id}):[];
@@ -833,26 +833,24 @@ async function pickService(v,stat,done,step){
     if(!note&&!items.length)note='No '+esc(nm.toLowerCase())+' services are available yet.';
   }
   if(sel&&!items.some(function(i){return i.id===sel}))sel=null;
-  if(full&&sel)ptab=items.find(function(i){return i.id===sel}).status;
+  if(full){items=items.filter(function(i){return i.status==='working'||i.id===sel});if(!note&&!items.length)note='No working '+esc(nm.toLowerCase())+' services yet. Move one into Working on the Panels screen first.'}
   function item(){return sel?items.find(function(i){return i.id===sel}):null}
   function list(){
     if(note)return '<div class="pk-none">'+note+'</div>';
-    var g=full?items.filter(function(o){return o.status===ptab}):items;
-    if(!g.length)return '<div class="pk-none">No '+esc(PT.filter(function(t){return t[0]===ptab})[0][1].toLowerCase())+' '+esc(nm.toLowerCase())+' services yet.</div>';
-    return g.map(function(o){return '<button class="pk-row'+(o.id===sel?' on':'')+'" data-pk="'+esc(o.id)+'"><span style="min-width:0"><b>'+esc(o.name)+'</b>'+(full?'<small>'+esc(o.site)+(o.ok?' · ✓ Approved':'')+'</small>':'')+'</span><span class="pp">'+usd2(o.price)+' / 1K</span></button>'}).join('');
+    return items.map(function(o){return '<button class="pk-row'+(o.id===sel?' on':'')+'" data-pk="'+esc(o.id)+'"><span style="min-width:0"><b>'+esc(o.name)+'</b>'+(full?'<small>'+esc(o.site)+(o.ok?' · ✓ Approved':'')+'</small>':'')+'</span><span class="pp">'+usd2(o.price)+' / 1K</span></button>'}).join('');
   }
   function cost(){var q=qnum(document.getElementById('pkq').value),o=item();
-    document.getElementById('pkc').innerHTML='<span>'+(o?'Cost at '+usd2(o.price)+' per 1,000':'Pick a service to see the cost')+'</span><b>'+(o?usd2(o.price*q/1000):'')+'</b>'}
-  function paint(){var t=document.getElementById('pkt');if(t)t.innerHTML=PT.map(function(x){return '<button class="t-'+x[0]+(ptab===x[0]?' on':'')+'" data-pt="'+x[0]+'">'+x[1]+'</button>'}).join('');document.getElementById('pkl').innerHTML=list();cost()}
+    document.getElementById('pkc').innerHTML='<span>Total</span><b>'+usd2(o?o.price*q/1000:0)+'</b>';
+    var ok=document.getElementById('ok'),on=!!o&&q>0;ok.disabled=!on;ok.style.opacity=on?'':'.45'}
+  function paint(){document.getElementById('pkl').innerHTML=list();cost()}
   var saveTxt=step?(step.i<step.n?'Save & next':'Save & finish'):'Save';
-  openSheet(head+'<div class="pinfo">'+(full?'Pick a service from your Panels list, then set how many you want.':'Pick a service, then set how many you want.')+'</div>'+(full?'<div class="pk-tabs" id="pkt"></div>':'')+'<div class="pk-list" id="pkl"></div><input type="text" id="pkq" inputmode="numeric" placeholder="How many '+esc(nm.toLowerCase())+'?" value="'+(had?esc(v.goals[stat]):'')+'" autocomplete="off"><div class="pk-cost" id="pkc"></div><button class="btn" id="ok">'+saveTxt+'</button>'+(step?'<button class="btn alt" id="sk">Skip '+esc(nm.toLowerCase())+'</button>':(had?'<button class="btn alt" id="rm" style="color:var(--bad)">Remove '+esc(nm.toLowerCase())+'</button>':''))+'<button class="btn alt" id="x">'+(step?'Stop here':'Cancel')+'</button>');
+  openSheet(head+'<div class="pk-list" id="pkl"></div><label class="fl2" for="pkq">Amount wanted</label><input type="text" id="pkq" inputmode="numeric" placeholder="How many '+esc(nm.toLowerCase())+'?" value="'+(had?esc(v.goals[stat]):'')+'" autocomplete="off"><div class="pk-cost" id="pkc"></div><button class="btn" id="ok">'+saveTxt+'</button>'+(step?'<button class="btn alt" id="sk">Skip '+esc(nm.toLowerCase())+'</button>':(had?'<button class="btn alt" id="rm" style="color:var(--bad)">Remove '+esc(nm.toLowerCase())+'</button>':''))+'<button class="btn alt" id="x">'+(step?'Stop here':'Cancel')+'</button>');
   paint();
-  if(full)document.getElementById('pkt').onclick=function(e){var b=e.target.closest('[data-pt]');if(b){ptab=b.dataset.pt;paint()}};
   document.getElementById('pkl').onclick=function(e){var b=e.target.closest('[data-pk]');if(!b)return;sel=sel===b.dataset.pk?null:b.dataset.pk;paint()};
   document.getElementById('pkq').oninput=cost;
   document.getElementById('ok').onclick=function(){
     var q=qnum(document.getElementById('pkq').value),o=item();
-    if(!full&&!o){toast('Pick a service first');return}
+    if(!o){toast('Pick a service first');return}
     if(q<=0){toast('Type how many '+nm.toLowerCase()+' you want');return}
     closeSheet();done({qty:q,plan:o?{ref:o.id,name:o.name,price:o.price}:null});
     if(step)step.next();

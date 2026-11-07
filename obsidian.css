@@ -335,3 +335,6 @@ html,body{background:#060A18}
 /* placed / failed marks in the order results */
 .osr .pok{color:var(--ob-G)!important;text-shadow:0 0 10px rgba(52,211,153,.5)}
 .osr .pbad{color:var(--ob-R)!important}
+
+/* service picker total sits level with the amount */
+#pkc{align-items:center}
